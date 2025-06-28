@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sissy Maid Tracker</title>
+  <style>
+    body {
+      font-family: "Courier New", Courier, monospace;
+      background: #fce4ec;
+      color: #880e4f;
+      margin: 0;
+      padding: 1rem;
+    }
+    h1 {
+      text-align: center;
+      color: #ad1457;
+    }
+    #scanner {
+      margin: 1rem auto;
+      width: 300px;
+      height: 300px;
+      border: 2px dashed #c2185b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff0f5;
+    }
+    #scan-result {
+      margin-top: 0.5rem;
+      text-align: center;
+      font-weight: bold;
+    }
+    ul#task-list {
+      list-style: none;
+      padding: 0;
+    }
+    #task-list li {
+      margin: 0.5rem 0;
+      padding: 0.5rem;
+      background: #fff0f5;
+      border-left: 4px solid #ec407a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #task-list li.completed {
+      background: #e0f2f1;
+      text-decoration: line-through;
+      color: #00695c;
+    }
+    .timestamp {
+      font-size: 0.8rem;
+    }
+    #progress-bar {
+      height: 20px;
+      background: #ffcdd2;
+      margin: 1rem 0;
+    }
+    #progress-fill {
+      height: 100%;
+      width: 0%;
+      background: #ec407a;
+      text-align: center;
+      color: white;
+      line-height: 20px;
+    }
+    .qr-box {
+      margin: 0.5rem;
+      padding: 0.5rem;
+      background: #fff0f5;
+      border: 1px dashed #ec407a;
+      text-align: center;
+    }
+    #qr-container {
+      display: none;
+      flex-wrap: wrap;
+    }
+    #mistress-panel {
+      display: none;
+      margin-top: 2rem;
+      background: #fff3e0;
+      padding: 1rem;
+      border: 2px solid #ef6c00;
+    }
+    details {
+      margin-bottom: 1rem;
+    }
+    #summary-page {
+      display: none;
+      background: #fff8e1;
+      padding: 1rem;
+      border: 2px solid #f57c00;
+      margin-top: 2rem;
+    }
+    #summary-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    #summary-table th, #summary-table td {
+      border: 1px solid #f57c00;
+      padding: 0.5rem;
+      text-align: left;
+    }
+    #summary-table th {
+      background-color: #ffe0b2;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Sissy Maid Tracker</h1>
+<p>Your Humble Duty Awaits. Scan QR to <strong>start</strong> or <strong>complete</strong> a task.</p>
+
+<div id="scanner">
+  <div id="scan-result">Awaiting QR scan...</div>
+</div>
+
+<div id="progress-bar">
+  <div id="progress-fill">0%</div>
+</div>
+
+<ul id="task-list" aria-live="polite" aria-relevant="additions"></ul>
+
+<div id="qr-section">
+  <button id="toggle-qr-btn" aria-expanded="false" aria-controls="qr-container">Show QR Codes</button>
+  <div id="qr-container" aria-hidden="true"></div>
+</div>
+
+<button id="clear-button" aria-label="Clear all progress and reset tasks">Clear Progress</button>
+
+<div id="mistress-panel" aria-live="polite" aria-atomic="true" role="region">
+  <h2>Mistress View: Task Details</h2>
+  <div id="mistress-tasks"></div>
+</div>
+
+<div id="summary-page" role="region" aria-label="Task Summary">
+  <h2>All Tasks Completed – Summary</h2>
+  <table id="summary-table">
+    <thead>
+      <tr>
+        <th>Task</th>
+        <th>Started</th>
+        <th>Completed</th>
+        <th>Duration</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+  const tasks = [
+    { id: 'task-1', label: "Clean the floors thoroughly", humiliatingMessage: "Get on all fours, filthy maid, and scrub like the worthless servant you are." },
+    { id: 'task-2', label: "Dust all furniture", humiliatingMessage: "Each speck of dust mocks your incompetence—dust it with shame." },
+    { id: 'task-3', label: "Wash the dishes carefully", humiliatingMessage: "Make sure Mistress’s dishes sparkle—unlike your miserable self." },
+    { id: 'task-4', label: "Polish the silverware", humiliatingMessage: "Gaze at your pathetic reflection in each piece as you polish." },
+    { id: 'task-5', label: "Vacuum the carpets", humiliatingMessage: "Push that vacuum like a good little domestic doll." },
+    { id: 'task-6', label: "Organize the laundry", humiliatingMessage: "Fold Mistress's panties with trembling reverence, worm." },
+    { id: 'task-7', label: "Prepare tea for Mistress", humiliatingMessage: "Present the tea kneeling, eyes down, like a proper sissy maid." },
+    { id: 'task-8', label: "Iron Mistress's clothes", humiliatingMessage: "Her garments deserve perfection. You do not." },
+    { id: 'task-9', label: "Clean the bathroom", humiliatingMessage: "Scrub that toilet like your tongue will be tested there next." },
+    { id: 'task-10', label: "Mop the kitchen floor", humiliatingMessage: "Each stroke should chant your servitude: ‘I exist to serve Mistress.’" },
+    { id: 'task-11', label: "Arrange the books on the shelf", humiliatingMessage: "Every crooked spine reflects your failure—straighten them." },
+    { id: 'task-12', label: "Take out the trash", humiliatingMessage: "You're lucky Mistress doesn't throw you out with it." },
+    { id: 'task-13', label: "Water the plants", humiliatingMessage: "Even Mistress’s plants are more useful than you." },
+    { id: 'task-14', label: "Sweep the porch", humiliatingMessage: "Sweep with grace, slut—it’s the only elegance you’ll ever know." },
+    { id: 'task-15', label: "Fold the towels neatly", humiliatingMessage: "Mistress deserves crisp folds. Your limp wrists better perform." },
+  ];
+
+  let progress = JSON.parse(localStorage.getItem('sissyMaidProgress')) || {};
+  const taskListEl = document.getElementById('task-list');
+  const scanResultEl = document.getElementById('scan-result');
+  const progressFillEl = document.getElementById('progress-fill');
+  const toggleQrBtn = document.getElementById('toggle-qr-btn');
+  const qrContainer = document.getElementById('qr-container');
+  const clearButton = document.getElementById('clear-button');
+  const mistressPanel = document.getElementById('mistress-panel');
+  const mistressTasksContainer = document.getElementById('mistress-tasks');
+  const summaryPage = document.getElementById('summary-page');
+  const summaryTableBody = document.querySelector('#summary-table tbody');
+
+  function formatTimestamp(ts) {
+    if (!ts) return '-';
+    return new Date(ts).toLocaleString();
+  }
+
+  function formatDuration(start, end) {
+    if (!start || !end) return '-';
+    const diff = end - start;
+    const mins = Math.floor(diff / 60000);
+    const secs = Math.floor((diff % 60000) / 1000);
+    return `${mins}m ${secs}s`;
+  }
+
+  function checkAllCompleted() {
+    return tasks.every(({ id }) => progress[id] && progress[id].completedAt);
+  }
+
+  function showSummaryPage() {
+    document.getElementById('scanner').style.display = 'none';
+    document.getElementById('qr-section').style.display = 'none';
+    taskListEl.style.display = 'none';
+    document.getElementById('progress-bar').style.display = 'none';
+    clearButton.style.display = 'none';
+    summaryPage.style.display = 'block';
+
+    summaryTableBody.innerHTML = '';
+    tasks.forEach(({ id, label }) => {
+      const p = progress[id];
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${label}</td>
+        <td>${formatTimestamp(p?.startedAt)}</td>
+        <td>${formatTimestamp(p?.completedAt)}</td>
+        <td>${formatDuration(p?.startedAt, p?.completedAt)}</td>
+      `;
+      summaryTableBody.appendChild(tr);
+    });
+  }
+
+  function renderTasks() {
+    taskListEl.innerHTML = '';
+    let completedCount = 0;
+
+    tasks.forEach(({ id, label }) => {
+      const taskProgress = progress[id] || {};
+      const completed = Boolean(taskProgress.completedAt);
+      if (completed) completedCount++;
+
+      const li = document.createElement('li');
+      li.className = completed ? 'completed' : '';
+      li.setAttribute('data-task-id', id);
+
+      const labelSpan = document.createElement('span');
+      labelSpan.textContent = label;
+
+      const timeSpan = document.createElement('span');
+      timeSpan.className = 'timestamp';
+      timeSpan.textContent = completed
+        ? `Completed: ${formatTimestamp(taskProgress.completedAt)}`
+        : taskProgress.startedAt
+          ? `Started: ${formatTimestamp(taskProgress.startedAt)}`
+          : '';
+
+      li.appendChild(labelSpan);
+      li.appendChild(timeSpan);
+      taskListEl.appendChild(li);
+    });
+
+    const percent = Math.round((completedCount / tasks.length) * 100);
+    progressFillEl.style.width = percent + '%';
+    progressFillEl.textContent = percent + '%';
+
+    if (completedCount === tasks.length) {
+      setTimeout(showSummaryPage, 1000);
+    }
+  }
+
+  function saveProgress() {
+    localStorage.setItem('sissyMaidProgress', JSON.stringify(progress));
+  }
+
+  function generateQRCodes() {
+    qrContainer.innerHTML = '';
+    tasks.forEach(({ id, label }) => {
+      const div = document.createElement('div');
+      div.className = 'qr-box';
+      const canvas = document.createElement('canvas');
+      const labelEl = document.createElement('div');
+      labelEl.textContent = label;
+      div.appendChild(canvas);
+      div.appendChild(labelEl);
+      qrContainer.appendChild(div);
+      QRCode.toCanvas(canvas, id, {
+        width: 150,
+        margin: 1,
+        color: {
+          dark: '#880e4f',
+          light: '#fce4ec',
+        },
+      });
+    });
+  }
+
+  let html5QrScanner = null;
+  let scannerPaused = false;
+
+  function pauseScanner() {
+    if (html5QrScanner && !scannerPaused) {
+      html5QrScanner.pause();
+      scannerPaused = true;
+    }
+  }
+
+  function resumeScanner() {
+    if (html5QrScanner && scannerPaused) {
+      html5QrScanner.resume();
+      scannerPaused = false;
+    }
+  }
+
+  function onScanSuccess(decodedText) {
+    const task = tasks.find(t => t.id === decodedText);
+    if (!task) {
+      scanResultEl.textContent = "Unknown QR code.";
+      return;
+    }
+
+    const taskId = task.id;
+    const taskProgress = progress[taskId] || {};
+
+    if (!taskProgress.startedAt) {
+      progress[taskId] = {
+        startedAt: Date.now(),
+        completedAt: null,
+      };
+      scanResultEl.textContent = `Started task: ${task.label}`;
+      saveProgress();
+      renderTasks();
+      renderMistressTasks();
+      pauseScanner();
+      setTimeout(() => {
+        alert(task.humiliatingMessage);
+        resumeScanner();
+      }, 100);
+    } else if (!taskProgress.completedAt) {
+      progress[taskId].completedAt = Date.now();
+      scanResultEl.textContent = `Completed task: ${task.label}`;
+      saveProgress();
+      renderTasks();
+      renderMistressTasks();
+    } else {
+      scanResultEl.textContent = `Task already completed: ${task.label}`;
+    }
+  }
+
+  function onScanError(msg) {}
+
+  function startQrScanner() {
+    if (html5QrScanner) return;
+    html5QrScanner = new Html5Qrcode("scanner");
+    html5QrScanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      onScanSuccess,
+      onScanError
+    ).catch(err => {
+      scanResultEl.textContent = "Camera error: " + err;
+    });
+  }
+
+  clearButton.addEventListener('click', () => {
+    if (confirm("Clear all task progress?")) {
+      progress = {};
+      saveProgress();
+      location.reload();
+    }
+  });
+
+  toggleQrBtn.addEventListener('click', () => {
+    if (qrContainer.style.display === 'flex') {
+      qrContainer.style.display = 'none';
+      toggleQrBtn.textContent = 'Show QR Codes';
+    } else {
+      qrContainer.style.display = 'flex';
+      toggleQrBtn.textContent = 'Hide QR Codes';
+      generateQRCodes();
+    }
+  });
+
+  function renderMistressTasks() {
+    mistressTasksContainer.innerHTML = '';
+    tasks.forEach(({ id, label }) => {
+      const p = progress[id] || {};
+      const startedAt = p.startedAt || null;
+      const completedAt = p.completedAt || null;
+      const duration = (startedAt && completedAt) ? formatDuration(startedAt, completedAt) : '-';
+
+      const details = document.createElement('details');
+      details.innerHTML = `
+        <summary>${label}</summary>
+        <div><strong>Started:</strong> ${formatTimestamp(startedAt)}<br/>
+        <strong>Completed:</strong> ${formatTimestamp(completedAt)}<br/>
+        <strong>Duration:</strong> ${duration}</div>
+      `;
+      mistressTasksContainer.appendChild(details);
+    });
+  }
+
+  function promptMistressPassword() {
+    const pw = prompt("Enter Mistress Password:");
+    if (pw === "Mistress2025") {
+      mistressPanel.style.display = 'block';
+      renderMistressTasks();
+    } else {
+      alert("Incorrect password.");
+    }
+  }
+
+  window.addEventListener('load', () => {
+    renderTasks();
+    startQrScanner();
+    if (location.hash === '#mistress') {
+      promptMistressPassword();
+    }
+  });
+</script>
+</body>
+</html>
