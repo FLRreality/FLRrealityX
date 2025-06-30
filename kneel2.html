@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🥀 Kneeling Timer for Worthless Slave 🥀</title>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      background: #220000;
+      color: #ff4444;
+      max-width: 400px;
+      margin: 0 auto;
+      padding: 2em;
+      text-align: center;
+      user-select: none;
+    }
+    h1 {
+      font-size: 2.8em;
+      text-transform: uppercase;
+      letter-spacing: 0.3em;
+      margin-bottom: 0.2em;
+      text-shadow: 0 0 10px #ff0000;
+    }
+    #status {
+      font-weight: 900;
+      font-size: 1.2em;
+      margin: 1em 0 1.5em 0;
+      color: #ff2222;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      border: 3px dashed #ff2222;
+      padding: 1em;
+      background: #330000cc;
+      box-shadow: 0 0 10px #ff0000;
+    }
+    #timer {
+      font-size: 4em;
+      font-weight: 900;
+      color: #ff5555;
+      background: #660000;
+      padding: 0.3em 0;
+      border: 4px solid #ff1111;
+      border-radius: 12px;
+      margin-bottom: 0.4em;
+      user-select: none;
+      letter-spacing: 0.3em;
+      text-shadow: 0 0 8px #ff0000;
+    }
+    label {
+      display: block;
+      margin: 1em 0 0.3em;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #ff6666;
+    }
+    input[type=number], input[type=password] {
+      font-size: 1.2em;
+      width: 100%;
+      max-width: 250px;
+      padding: 0.3em 0.6em;
+      border: 2px solid #ff3333;
+      border-radius: 6px;
+      background: #440000;
+      color: #fff;
+      outline: none;
+    }
+    input[type=number]:focus, input[type=password]:focus {
+      border-color: #ff0000;
+      background: #550000;
+      color: #ffbbbb;
+    }
+    button {
+      font-size: 1.3em;
+      margin: 0.7em 0.4em;
+      padding: 0.5em 1.2em;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      border: 3px solid #ff2222;
+      border-radius: 12px;
+      background: #990000;
+      color: #ffdddd;
+      cursor: pointer;
+      box-shadow: 0 0 12px #ff2222;
+      user-select: none;
+      transition: background 0.3s ease;
+    }
+    button:hover:not(:disabled) {
+      background: #ff2222;
+      color: #ffffff;
+      box-shadow: 0 0 18px #ff4444;
+    }
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    #passwordPrompt {
+      margin-top: 2em;
+      border: 2px solid #aa2222;
+      padding: 1em;
+      background: #330000cc;
+      display: none;
+      user-select: none;
+    }
+    #passwordPrompt input {
+      font-size: 1.1em;
+      padding: 0.3em 0.6em;
+      border-radius: 8px;
+      border: 2px solid #ff4444;
+      background: #440000;
+      color: #fff;
+      width: 70%;
+      max-width: 250px;
+      margin-left: 0.5em;
+    }
+    #confirmStopBtn {
+      margin-left: 0.7em;
+    }
+    #kneelNow {
+      margin-top: 1em;
+      font-size: 1.6em;
+      font-weight: 900;
+      color: #ff1111;
+      text-transform: uppercase;
+      letter-spacing: 0.25em;
+      animation: blink 1.2s infinite;
+      text-shadow: 0 0 12px #ff0000;
+      user-select: none;
+    }
+    @keyframes blink {
+      0%, 100% {opacity: 1;}
+      50% {opacity: 0;}
+    }
+    #insult {
+      margin-top: 1.3em;
+      font-size: 1.2em;
+      font-weight: bold;
+      color: #ff5555;
+      font-style: italic;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🥀 KNEELING TIMER FOR WORTHLESS SLAVE 🥀</h1>
+
+  <label for="durationInput">Kneeling Duration (minutes):</label>
+  <input type="number" id="durationInput" min="1" max="180" value="5" />
+
+  <label for="mistressPasswordInput">Mistress Password (to control you):</label>
+  <input type="password" id="mistressPasswordInput" placeholder="No cheating!" minlength="4" />
+
+  <button id="requestPermBtn">Request Motion Permission (iOS Only)</button>
+  <button id="startBtn" disabled>Start Kneeling (GET ON YOUR KNEES!)</button>
+  <button id="stopBtn" disabled>Stop Kneeling (Mistress Only)</button>
+
+  <div id="status">PLEASE REQUEST PERMISSION TO HUMILIATE YOURSELF</div>
+  <div id="timer">00:00</div>
+
+  <div id="kneelNow" style="display:none;">KNEEL NOW, LOSER!</div>
+  <div id="insult" style="display:none;">YOU WILL OBEY AND SUFFER</div>
+
+  <div id="passwordPrompt">
+    <label>Enter Mistress Password to Stop:
+      <input type="password" id="stopPasswordInput" autocomplete="off" />
+    </label>
+    <button id="confirmStopBtn">CONFIRM</button>
+  </div>
+
+  <script>
+    const requestPermBtn = document.getElementById('requestPermBtn');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const statusElem = document.getElementById('status');
+    const timerElem = document.getElementById('timer');
+    const durationInput = document.getElementById('durationInput');
+    const mistressPasswordInput = document.getElementById('mistressPasswordInput');
+
+    const passwordPrompt = document.getElementById('passwordPrompt');
+    const stopPasswordInput = document.getElementById('stopPasswordInput');
+    const confirmStopBtn = document.getElementById('confirmStopBtn');
+
+    const kneelNowMsg = document.getElementById('kneelNow');
+    const insultMsg = document.getElementById('insult');
+
+    let mistressPassword = '';
+    let kneelingDurationSeconds = 0;
+    let sessionSeconds = 0;
+    let timerInterval = null;
+    let isTimerRunning = false;
+    let permissionGranted = false;
+
+    function formatTime(s) {
+      const m = Math.floor(s / 60);
+      const sec = s % 60;
+      return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+    }
+
+    function updateDisplay() {
+      timerElem.textContent = formatTime(sessionSeconds);
+    }
+
+    function startTimer() {
+      if (isTimerRunning) return;
+      if (sessionSeconds >= kneelingDurationSeconds) return;
+
+      isTimerRunning = true;
+      statusElem.textContent = 'YOUR TIME TO BE HUMILIATED HAS BEGUN. DON’T MOVE!';
+      kneelNowMsg.style.display = 'block';
+      insultMsg.style.display = 'block';
+
+      timerInterval = setInterval(() => {
+        sessionSeconds++;
+        updateDisplay();
+
+        if (sessionSeconds >= kneelingDurationSeconds) {
+          stopTimer(true);
+          alert('Session complete. You may rise... for now.');
+        }
+      }, 1000);
+      stopBtn.disabled = false;
+    }
+
+    function pauseTimer() {
+      if (!isTimerRunning) return;
+      clearInterval(timerInterval);
+      isTimerRunning = false;
+      statusElem.textContent = 'PHONE MOVED! TIMER PAUSED. YOU ARE WEAK.';
+      kneelNowMsg.style.display = 'none';
+      insultMsg.style.display = 'none';
+      stopBtn.disabled = true;
+    }
+
+    function stopTimer(completed) {
+      clearInterval(timerInterval);
+      isTimerRunning = false;
+      stopBtn.disabled = true;
+      startBtn.disabled = false;
+      requestPermBtn.disabled = false;
+      kneelNowMsg.style.display = 'none';
+      insultMsg.style.display = 'none';
+
+      if (completed) {
+        statusElem.textContent = 'SESSION COMPLETE. YOU HAVE FAILED LESS THAN BEFORE.';
+      } else {
+        statusElem.textContent = 'TIMER STOPPED BY MISTRESS. YOU ARE WORTHLESS.';
+      }
+    }
+
+    function handleOrientation(e) {
+      if (!isTimerRunning) {
+        if (e.beta !== null && e.gamma !== null) {
+          // debug:
+          console.log(`Orientation beta: ${e.beta.toFixed(2)} gamma: ${e.gamma.toFixed(2)}`);
+          // Check if phone is face down or tilted too much
+          if (Math.abs(e.beta) > 40 || Math.abs(e.gamma) > 40) {
+            pauseTimer();
+          }
+        }
+        return;
+      }
+    }
+
+    function requestPermission() {
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission().then(response => {
+          if (response === 'granted') {
+            permissionGranted = true;
+            window.addEventListener('deviceorientation', handleOrientation);
+            statusElem.textContent = 'PERMISSION GRANTED. READY TO KNEEL, SLAVE.';
+            startBtn.disabled = false;
+            requestPermBtn.disabled = true;
+          } else {
+            statusElem.textContent = 'PERMISSION DENIED. YOU ARE A FAILURE.';
+          }
+        }).catch(err => {
+          statusElem.textContent = 'ERROR REQUESTING PERMISSION: ' + err;
+        });
+      } else {
+        // Non iOS devices
+        permissionGranted = true;
+        window.addEventListener('deviceorientation', handleOrientation);
+        statusElem.textContent = 'PERMISSION GRANTED. READY TO KNEEL, SLAVE.';
+        startBtn.disabled = false;
+        requestPermBtn.disabled = true;
+      }
+    }
+
+    requestPermBtn.onclick = requestPermission;
+
+    startBtn.onclick = () => {
+      mistressPassword = mistressPasswordInput.value.trim();
+      if (mistressPassword.length < 4) {
+        alert('Mistress password too short. Obey her rules!');
+        return;
+      }
+      kneelingDurationSeconds = parseInt(durationInput.value, 10) * 60;
+      if (isNaN(kneelingDurationSeconds) || kneelingDurationSeconds < 60) {
+        alert('Set a proper kneeling time, weakling.');
+        return;
+      }
+      sessionSeconds = 0;
+      updateDisplay();
+
+      startBtn.disabled = true;
+      durationInput.disabled = true;
+      mistressPasswordInput.disabled = true;
+      stopBtn.disabled = false;
+      requestPermBtn.disabled = true;
+
+      startTimer();
+    };
+
+    stopBtn.onclick = () => {
+      passwordPrompt.style.display = 'block';
+      stopPasswordInput.value = '';
+      stopPasswordInput.focus();
+    };
+
+    confirmStopBtn.onclick = () => {
+      if (stopPasswordInput.value === mistressPassword) {
+        stopTimer(false);
+        durationInput.disabled = false;
+        mistressPasswordInput.disabled = false;
+        passwordPrompt.style.display = 'none';
+      } else {
+        alert('Wrong password, you pathetic worm!');
+        stopPasswordInput.focus();
+      }
+    };
+
+  </script>
+
+</body>
+</html>
