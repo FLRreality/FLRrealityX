@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Slave Location Check-In</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f6f1f9;
+      padding: 20px;
+      color: #333;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #56008a;
+    }
+    .checkin-form {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 400px;
+      margin: auto;
+    }
+    input, select, textarea, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      margin-bottom: 15px;
+      border-radius: 5px;
+      border: 1px solid #aaa;
+    }
+    button {
+      background-color: #6a008f;
+      color: white;
+      font-weight: bold;
+      border: none;
+    }
+    button:hover {
+      background-color: #56006c;
+    }
+    .log {
+      margin-top: 30px;
+    }
+    .entry {
+      background-color: #eee;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 5px;
+    }
+    .surprise {
+      background: #ffe1f0;
+      padding: 10px;
+      border: 2px dashed #cc005f;
+      margin-top: 15px;
+      text-align: center;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Slave Location Check-In</h1>
+
+  <div class="checkin-form">
+    <h2>Submit Check-In</h2>
+    <form id="checkinForm">
+      <label for="location">Where are you?</label>
+      <select id="location" required>
+        <option value="">Select location</option>
+        <option value="Home">Home</option>
+        <option value="Work">Work</option>
+        <option value="Store">Store</option>
+        <option value="Other">Other</option>
+      </select>
+
+      <label for="outfit">Describe your outfit</label>
+      <textarea id="outfit" rows="3" required placeholder="Describe your outfit…"></textarea>
+
+      <label for="photo">Selfie Photo (Required)</label>
+      <input type="file" accept="image/*" id="photo" required>
+
+      <button type="submit">Submit Check-In</button>
+    </form>
+  </div>
+
+  <div class="log" id="log">
+    <h2>Check-In Log</h2>
+  </div>
+
+  <script>
+    const form = document.getElementById('checkinForm');
+    const log = document.getElementById('log');
+
+    const surpriseCommands = [
+      "Kneel immediately and say 'I am Mistress's object.'",
+      "10 push-ups with moaning after each.",
+      "Record a video praising your Mistress’s superiority.",
+      "Wear a plug for 1 hour and thank your Mistress.",
+      "Edge once. No release. Report when finished.",
+      "Clean your boots with your tongue. Photo proof required."
+    ];
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const location = document.getElementById('location').value;
+      const outfit = document.getElementById('outfit').value;
+      const photo = document.getElementById('photo').files[0];
+
+      if (!location || !outfit || !photo) {
+        alert("All fields are required.");
+        return;
+      }
+
+      if (!navigator.geolocation) {
+        alert("Geolocation not supported by your device.");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(success, error);
+
+      function error() {
+        alert("Location access denied. Check-in blocked.");
+      }
+
+      function success(position) {
+        const latitude = position.coords.latitude.toFixed(5);
+        const longitude = position.coords.longitude.toFixed(5);
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const entry = document.createElement('div');
+          entry.className = 'entry';
+          entry.innerHTML = `
+            <strong>Time:</strong> ${new Date().toLocaleString()}<br>
+            <strong>Location Selected:</strong> ${location}<br>
+            <strong>Outfit:</strong> ${outfit}<br>
+            <strong>GPS:</strong> Lat ${latitude}, Lon ${longitude}<br>
+            <strong>Photo Proof:</strong><br>
+            <img src="${e.target.result}" style="width:100%;max-width:200px;border-radius:5px;margin-top:5px;">
+            <div class="surprise">
+              🧠 Surprise Command:<br>
+              ${surpriseCommands[Math.floor(Math.random() * surpriseCommands.length)]}
+            </div>
+          `;
+          log.appendChild(entry);
+          form.reset();
+        };
+
+        reader.readAsDataURL(photo);
+      }
+    });
+  </script>
+
+</body>
+</html>

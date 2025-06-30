@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Slave Check-In</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f2ecf9;
+      padding: 20px;
+      color: #333;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #4b0076;
+    }
+    .form-container {
+      background: #fff;
+      padding: 20px;
+      max-width: 500px;
+      margin: auto;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    input, select, textarea, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #6d008f;
+      color: white;
+      font-weight: bold;
+      border: none;
+    }
+    button:hover {
+      background-color: #53006c;
+    }
+    .log {
+      max-width: 500px;
+      margin: 30px auto;
+    }
+    .entry {
+      background: #f7f7f7;
+      padding: 15px;
+      margin-top: 15px;
+      border-radius: 8px;
+      box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
+    }
+    .surprise {
+      background: #ffe6f2;
+      border: 2px dashed #cc005f;
+      padding: 10px;
+      margin-top: 10px;
+      font-weight: bold;
+      text-align: center;
+    }
+    img {
+      width: 100%;
+      max-width: 200px;
+      margin-top: 10px;
+      border-radius: 5px;
+    }
+    .location-display {
+      font-style: italic;
+      font-size: 0.9em;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📍 Slave Location Check-In</h1>
+
+  <div class="form-container">
+    <form id="checkinForm">
+      <label for="location">Select General Location:</label>
+      <select id="location" required>
+        <option value="">-- Choose --</option>
+        <option value="Home">Home</option>
+        <option value="Work">Work</option>
+        <option value="Store">Store</option>
+        <option value="Other">Other</option>
+      </select>
+
+      <label for="outfit">Describe Your Outfit:</label>
+      <textarea id="outfit" rows="3" placeholder="Detailed outfit description..." required></textarea>
+
+      <label for="photo">Upload Selfie Photo (required):</label>
+      <input type="file" id="photo" accept="image/*" capture="environment" required>
+
+      <button type="submit">📸 Submit Check-In</button>
+    </form>
+
+    <p class="location-display" id="geoStatus">🔍 Fetching your GPS location...</p>
+  </div>
+
+  <div class="log" id="log">
+    <h2>🗒️ Check-In Log</h2>
+    <!-- Entries will appear here -->
+  </div>
+
+  <script>
+    let currentCoords = null;
+
+    // Get geolocation
+    navigator.geolocation.getCurrentPosition(
+      position => {
+        currentCoords = position.coords;
+        document.getElementById('geoStatus').textContent =
+          `📍 GPS Location found: Lat ${currentCoords.latitude.toFixed(5)}, Lon ${currentCoords.longitude.toFixed(5)}`;
+      },
+      error => {
+        document.getElementById('geoStatus').textContent = "⚠️ Unable to fetch location.";
+      }
+    );
+
+    const form = document.getElementById('checkinForm');
+    const log = document.getElementById('log');
+
+    const surpriseCommands = [
+      "On your knees. Say 'Thank you for owning me, Mistress.'",
+      "Do 10 push-ups and send proof.",
+      "Recite your mantra aloud 5 times.",
+      "Apply clothespins to your nipples for 5 minutes.",
+      "Put on panties and wear them for the rest of the day.",
+      "Write 'slave' on your chest and take a photo.",
+    ];
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const location = document.getElementById('location').value;
+      const outfit = document.getElementById('outfit').value;
+      const photoInput = document.getElementById('photo');
+
+      if (!location || !outfit || !photoInput.files[0]) {
+        alert("All fields including photo are required.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        const entry = document.createElement('div');
+        entry.className = 'entry';
+
+        let gpsData = '📍 Location unavailable';
+        if (currentCoords) {
+          gpsData = `📍 Lat: ${currentCoords.latitude.toFixed(5)}, Lon: ${currentCoords.longitude.toFixed(5)}`;
+        }
+
+        const surprise = surpriseCommands[Math.floor(Math.random() * surpriseCommands.length)];
+
+        entry.innerHTML = `
+          <strong>Time:</strong> ${new Date().toLocaleString()}<br>
+          <strong>Selected Location:</strong> ${location}<br>
+          <strong>Outfit:</strong> ${outfit}<br>
+          ${gpsData}<br>
+          <img src="${event.target.result}" alt="Selfie Proof">
+          <div class="surprise">🔐 Surprise Command:<br>${surprise}</div>
+        `;
+
+        log.insertBefore(entry, log.children[1]);
+        form.reset();
+        document.getElementById('geoStatus').textContent = "🔍 Awaiting next GPS update...";
+      };
+
+      reader.readAsDataURL(photoInput.files[0]);
+    });
+  </script>
+
+</body>
+</html>
