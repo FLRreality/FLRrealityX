@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🥀 Kneeling Timer - No Movement Allowed 🥀</title>
+  <style>
+    body {
+      font-family: 'Impact', 'Arial Black', Arial, sans-serif;
+      background: #1a0000;
+      color: #ff4444;
+      max-width: 450px;
+      margin: 0 auto;
+      padding: 2em 1.5em;
+      text-align: center;
+      user-select: none;
+      -webkit-user-select:none;
+      -moz-user-select:none;
+      -ms-user-select:none;
+    }
+    h1 {
+      font-size: 2.5em;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      margin-bottom: 0.2em;
+      text-shadow: 0 0 8px #ff0000;
+      color: #ff2222;
+    }
+    #status {
+      font-weight: 900;
+      font-size: 1.3em;
+      margin: 1em 0 1.5em 0;
+      color: #ff2222;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      border: 3px dashed #ff2222;
+      padding: 1em;
+      background: #330000cc;
+      box-shadow: 0 0 10px #ff0000;
+      user-select:none;
+    }
+    #timer {
+      font-size: 5em;
+      font-weight: 900;
+      color: #ff5555;
+      background: #660000;
+      padding: 0.2em 0;
+      border: 5px solid #ff1111;
+      border-radius: 12px;
+      margin-bottom: 0.6em;
+      letter-spacing: 0.3em;
+      text-shadow: 0 0 10px #ff0000;
+      user-select:none;
+    }
+    label {
+      display: block;
+      margin: 1em 0 0.3em;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #ff6666;
+    }
+    input[type=number], input[type=password] {
+      font-size: 1.3em;
+      width: 100%;
+      max-width: 260px;
+      padding: 0.3em 0.6em;
+      border: 2px solid #ff3333;
+      border-radius: 8px;
+      background: #440000;
+      color: #fff;
+      outline: none;
+      user-select:none;
+    }
+    input[type=number]:focus, input[type=password]:focus {
+      border-color: #ff0000;
+      background: #550000;
+      color: #ffbbbb;
+    }
+    button {
+      font-size: 1.4em;
+      margin: 0.7em 0.4em;
+      padding: 0.55em 1.5em;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      border: 3px solid #ff2222;
+      border-radius: 14px;
+      background: #990000;
+      color: #ffdddd;
+      cursor: pointer;
+      box-shadow: 0 0 14px #ff2222;
+      user-select:none;
+      transition: background 0.3s ease;
+    }
+    button:hover:not(:disabled) {
+      background: #ff2222;
+      color: #fff;
+      box-shadow: 0 0 20px #ff4444;
+    }
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    #passwordPrompt {
+      margin-top: 2em;
+      border: 2px solid #aa2222;
+      padding: 1em;
+      background: #330000cc;
+      display: none;
+      user-select:none;
+    }
+    #passwordPrompt input {
+      font-size: 1.2em;
+      padding: 0.3em 0.6em;
+      border-radius: 8px;
+      border: 2px solid #ff4444;
+      background: #440000;
+      color: #fff;
+      width: 70%;
+      max-width: 260px;
+      margin-left: 0.5em;
+      user-select:none;
+    }
+    #confirmStopBtn {
+      margin-left: 0.7em;
+    }
+    #kneelNow {
+      margin-top: 1.2em;
+      font-size: 1.7em;
+      font-weight: 900;
+      color: #ff1111;
+      text-transform: uppercase;
+      letter-spacing: 0.3em;
+      animation: blink 1.2s infinite;
+      text-shadow: 0 0 15px #ff0000;
+      user-select:none;
+    }
+    @keyframes blink {
+      0%, 100% {opacity: 1;}
+      50% {opacity: 0;}
+    }
+    #insult {
+      margin-top: 1.5em;
+      font-size: 1.3em;
+      font-weight: 900;
+      color: #ff5555;
+      font-style: italic;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      user-select:none;
+    }
+    #videoContainer {
+      margin-top: 1.5em;
+      position: relative;
+      width: 320px;
+      height: 240px;
+      margin-left: auto;
+      margin-right: auto;
+      border: 3px solid #ff2222;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 15px #ff0000;
+      user-select:none;
+    }
+    video, canvas {
+      width: 320px;
+      height: 240px;
+      user-select:none;
+      -webkit-user-select:none;
+      -moz-user-select:none;
+      -ms-user-select:none;
+    }
+    #motionAlert {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 320px;
+      height: 240px;
+      background: rgba(255,0,0,0.6);
+      color: white;
+      font-weight: 900;
+      font-size: 2em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      user-select:none;
+      visibility: hidden;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🥀 KNEELING TIMER FOR WORTHLESS SLAVE 🥀</h1>
+
+  <label for="durationInput">Kneeling Duration (minutes):</label>
+  <input type="number" id="durationInput" min="1" max="180" value="5" />
+
+  <label for="mistressPasswordInput">Mistress Password (to control you):</label>
+  <input type="password" id="mistressPasswordInput" placeholder="No cheating!" minlength="4" />
+
+  <button id="startBtn">Start Kneeling (GET ON YOUR KNEES!)</button>
+  <button id="stopBtn" disabled>Stop Kneeling (Mistress Only)</button>
+
+  <div id="status">Enter time and password, then press Start.</div>
+  <div id="timer">00:00</div>
+
+  <div id="kneelNow" style="display:none;">KNEEL NOW, LOSER!</div>
+  <div id="insult" style="display:none;">YOU WILL OBEY AND SUFFER</div>
+
+  <div id="passwordPrompt">
+    <label>Enter Mistress Password to Stop:
+      <input type="password" id="stopPasswordInput" autocomplete="off" />
+    </label>
+    <button id="confirmStopBtn">CONFIRM</button>
+  </div>
+
+  <div id="videoContainer">
+    <video id="video" autoplay muted></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <div id="motionAlert">MOVEMENT DETECTED! STOP IT!</div>
+  </div>
+
+  <script>
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const statusElem = document.getElementById('status');
+    const timerElem = document.getElementById('timer');
+    const durationInput = document.getElementById('durationInput');
+    const mistressPasswordInput = document.getElementById('mistressPasswordInput');
+    const kneelNowElem = document.getElementById('kneelNow');
+    const insultElem = document.getElementById('insult');
+    const passwordPrompt = document.getElementById('passwordPrompt');
+    const stopPasswordInput = document.getElementById('stopPasswordInput');
+    const confirmStopBtn = document.getElementById('confirmStopBtn');
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const motionAlert = document.getElementById('motionAlert');
+
+    let mistressPassword = '';
+    let kneelingDurationSeconds = 0;
+    let sessionSeconds = 0;
+    let timerInterval = null;
+
+    let videoStream = null;
+    let baselineFrameData = null;
+    let motionDetected = false;
+    let baselineFramesCaptured = 0;
+    const baselineCaptureFramesNeeded = 15; // first 15 frames to build baseline
+    const motionThreshold = 30; // pixel difference threshold (0-255)
+    const motionPixelsThreshold = 1500; // number of pixels that must be different to trigger motion
+
+    // Timer helpers
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60).toString().padStart(2, '0');
+      const s = (sec % 60).toString().padStart(2, '0');
+      return `${m}:${s}`;
+    }
+    function updateDisplay() {
+      timerElem.textContent = formatTime(kneelingDurationSeconds - sessionSeconds);
+    }
+
+    function startTimer() {
+      statusElem.textContent = 'KNEEL AND DON\'T MOVE! STARTING TIMER...';
+      kneelNowElem.style.display = 'block';
+      insultElem.style.display = 'block';
+
+      sessionSeconds = 0;
+      updateDisplay();
+
+      timerInterval = setInterval(() => {
+        if (motionDetected) {
+          pauseTimer('MOTION DETECTED! STOP MOVING, SLAVE!');
+          return;
+        }
+
+        sessionSeconds++;
+        updateDisplay();
+
+        if (sessionSeconds >= kneelingDurationSeconds) {
+          stopTimer(true);
+        }
+      }, 1000);
+    }
+
+    function pauseTimer(message) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      statusElem.textContent = message || 'TIMER PAUSED. YOU ARE WEAK!';
+      kneelNowElem.style.display = 'none';
+      insultElem.style.display = 'none';
+    }
+
+    function stopTimer(completed) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      kneelNowElem.style.display = 'none';
+      insultElem.style.display = 'none';
+
+      if (completed) {
+        statusElem.textContent = 'FINISHED KNEELING. YOU MAY RISE... FOR NOW.';
+      } else {
+        statusElem.textContent = 'KNEELING STOPPED BY MISTRESS. YOU ARE NOT FREE.';
+      }
+
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      durationInput.disabled = false;
+      mistressPasswordInput.disabled = false;
+
+      motionDetected = false;
+      baselineFrameData = null;
+      baselineFramesCaptured = 0;
+    }
+
+    // Password stop flow
+    stopBtn.onclick = () => {
+      passwordPrompt.style.display = 'block';
+      stopPasswordInput.value = '';
+      stopPasswordInput.focus();
+    };
+    confirmStopBtn.onclick = () => {
+      if (stopPasswordInput.value === mistressPassword) {
+        stopTimer(false);
+        passwordPrompt.style.display = 'none';
+      } else {
+        alert('WRONG PASSWORD! WORTHLESS!');
+        stopPasswordInput.focus();
+      }
+    };
+
+    // Movement detection setup
+    async function startVideo() {
+      try {
+        videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = videoStream;
+        await video.play();
+      } catch (err) {
+        alert('Camera access denied or not available. You must allow to proceed!');
+        startBtn.disabled = true;
+        statusElem.textContent = 'ENABLE CAMERA ACCESS TO START.';
+      }
+    }
+
+    function captureFrame() {
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      return ctx.getImageData(0, 0, canvas.width, canvas.height);
+    }
+
+    function framesDiff(frame1, frame2) {
+      if (!frame1 || !frame2) return 0;
+      let diffCount = 0;
+      for (let i = 0; i < frame1.data.length; i += 4) {
+        const rDiff = Math.abs(frame1.data[i] - frame2.data[i]);
+        const gDiff = Math.abs(frame1.data[i + 1] - frame2.data[i + 1]);
+        const bDiff = Math.abs(frame1.data[i + 2] - frame2.data[i + 2]);
+        if (rDiff > motionThreshold || gDiff > motionThreshold || bDiff > motionThreshold) {
+          diffCount++;
+        }
+      }
+      return diffCount;
+    }
+
+    function checkMotion() {
+      if (baselineFramesCaptured < baselineCaptureFramesNeeded) {
+        // Build baseline frame by averaging first few frames
+        const currentFrame = captureFrame();
+        if (!baselineFrameData) {
+          baselineFrameData = currentFrame;
+        } else {
+          for (let i = 0; i < baselineFrameData.data.length; i++) {
+            // Average pixels (simple running average)
+            baselineFrameData.data[i] = Math.floor((baselineFrameData.data[i] * baselineFramesCaptured + currentFrame.data[i]) / (baselineFramesCaptured + 1));
+          }
+        }
+        baselineFramesCaptured++;
+        statusElem.textContent = `Calibrating posture... ${baselineFramesCaptured}/${baselineCaptureFramesNeeded}`;
+        return false; // no motion check during baseline capture
+      }
+      // After baseline established, compare current frame to baseline
+      const currentFrame = captureFrame();
+      const diff = framesDiff(baselineFrameData, currentFrame);
+      // console.log('Motion diff pixels:', diff);
+      if (diff > motionPixelsThreshold) {
+        motionDetected = true;
+        motionAlert.style.visibility = 'visible';
+        pauseTimer('MOTION DETECTED! STOP MOVING, SLAVE!');
+      } else {
+        motionDetected = false;
+        motionAlert.style.visibility = 'hidden';
+      }
+      return motionDetected;
+    }
+
+    let motionCheckInterval = null;
+
+    // Start/Stop buttons
+    startBtn.onclick = async () => {
+      mistressPassword = mistressPasswordInput.value.trim();
+      if (mistressPassword.length < 4) {
+        alert('Mistress password too short. Obey her rules!');
+        return;
+      }
+      kneelingDurationSeconds = parseInt(durationInput.value, 10) * 60;
+      if (isNaN(kneelingDurationSeconds) || kneelingDurationSeconds < 60) {
+        alert('Set a proper kneeling time, weakling.');
+        return;
+      }
+      await startVideo();
+
+      // Setup canvas size same as video
+      canvas.width = video.videoWidth || 320;
+      canvas.height = video.videoHeight || 240;
+
+      sessionSeconds = 0;
+      updateDisplay();
+
+      startBtn.disabled = true;
+      durationInput.disabled = true;
+      mistressPasswordInput.disabled = true;
+      stopBtn.disabled = false;
+      passwordPrompt.style.display = 'none';
+
+      // Reset baseline
+      baselineFrameData = null;
+      baselineFramesCaptured = 0;
+      motionDetected = false;
+
+      // Start motion check interval (about 10fps)
+      motionCheckInterval = setInterval(checkMotion, 100);
+
+      startTimer();
+    };
+
+    // Cleanup on stop or page close
+    function cleanup() {
+      clearInterval(timerInterval);
+      clearInterval(motionCheckInterval);
+      timerInterval = null;
+      motionCheckInterval = null;
+      if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
+      }
+    }
+    window.addEventListener('beforeunload', cleanup);
+
+  </script>
+
+</body>
+</html>
