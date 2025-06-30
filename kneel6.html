@@ -3,95 +3,25 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Kneeling Position Enforcement</title>
+<title>Kneeling Position Enforcement with Sensor</title>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    background: #fff;
-    margin: 0; padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-  }
-  #app {
-    border: 2px solid #ccc;
-    border-radius: 12px;
-    width: 350px;
-    padding: 24px;
-    box-shadow: 0 0 12px #aaa;
-  }
-  h1 {
-    font-size: 1.3rem;
-    margin-bottom: 12px;
-  }
-  p, label {
-    font-size: 1rem;
-    margin-bottom: 12px;
-    display: block;
-  }
-  input[type="password"], input[type="number"] {
-    width: 100%;
-    padding: 8px 10px;
-    margin-bottom: 16px;
-    font-size: 1rem;
-    border: 1px solid #bbb;
-    border-radius: 6px;
-  }
-  button {
-    font-size: 1rem;
-    padding: 12px 24px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    margin: 8px 4px 0 0;
-  }
-  button.primary {
-    background-color: #2ecc71;
-    color: white;
-  }
-  button.primary:active {
-    background-color: #27ae60;
-  }
-  button.alert {
-    background-color: #e74c3c;
-    color: white;
-  }
-  button.alert:active {
-    background-color: #c0392b;
-  }
-  .status {
-    font-weight: bold;
-    margin-bottom: 12px;
-    font-size: 1.2rem;
-  }
-  .status.correct {
-    color: #27ae60;
-  }
-  .status.wrong {
-    color: #c0392b;
-  }
-  .sensor-data {
-    background: #f7f7f7;
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 24px;
-    font-family: monospace;
-  }
-  .timer {
-    font-size: 2rem;
-    margin-bottom: 24px;
-    text-align: center;
-    font-weight: bold;
-  }
-  .buttons {
-    text-align: center;
-  }
-  .error {
-    color: #e74c3c;
-    font-weight: bold;
-    margin-bottom: 12px;
-  }
+  body { font-family: Arial, sans-serif; background: #fff; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+  #app { border: 2px solid #ccc; border-radius: 12px; width: 350px; padding: 24px; box-shadow: 0 0 12px #aaa; }
+  h1 { font-size: 1.3rem; margin-bottom: 12px; }
+  p, label { font-size: 1rem; margin-bottom: 12px; display: block; }
+  input[type="password"], input[type="number"] { width: 100%; padding: 8px 10px; margin-bottom: 16px; font-size: 1rem; border: 1px solid #bbb; border-radius: 6px; }
+  button { font-size: 1rem; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; margin: 8px 4px 0 0; }
+  button.primary { background-color: #2ecc71; color: white; }
+  button.primary:active { background-color: #27ae60; }
+  button.alert { background-color: #e74c3c; color: white; }
+  button.alert:active { background-color: #c0392b; }
+  .status { font-weight: bold; margin-bottom: 12px; font-size: 1.2rem; }
+  .status.correct { color: #27ae60; }
+  .status.wrong { color: #c0392b; }
+  .sensor-data { background: #f7f7f7; border-radius: 8px; padding: 12px; margin-bottom: 24px; font-family: monospace; }
+  .timer { font-size: 2rem; margin-bottom: 24px; text-align: center; font-weight: bold; }
+  .buttons { text-align: center; }
+  .error { color: #e74c3c; font-weight: bold; margin-bottom: 12px; }
 </style>
 </head>
 <body>
@@ -112,7 +42,7 @@
   <!-- Calibration Screen -->
   <div id="screen-calibration" style="display:none;">
     <h1>Kneeling Position Calibration</h1>
-    <p>Please kneel in your proper position.<br />Hold or place your phone as instructed (e.g., on the floor in front of you).<br />Press Start Calibration to record your baseline.</p>
+    <p>Place your phone in the kneeling position.<br>Press Start Calibration to record baseline.</p>
     <div class="buttons">
       <button class="primary" id="btn-start-calibration">Start Calibration</button>
     </div>
@@ -121,12 +51,11 @@
   <!-- Monitoring Screen -->
   <div id="screen-monitoring" style="display:none;">
     <h1>Kneeling Enforcement Active</h1>
-    <div class="status correct">✅ Kneeling Detected</div>
+    <div class="status correct" id="kneeling-status">⏳ Waiting for kneeling detection...</div>
     <div class="timer" id="timer">00:00:00</div>
     <div class="sensor-data">
-      Tilt Angle: <span id="tilt-angle">90°</span><br />
-      Stability: <span id="stability">Stable</span><br />
-      Proximity: <span id="proximity">Close to surface</span>
+      Tilt Angle (Beta): <span id="tilt-angle">N/A</span>°<br />
+      Kneeling Status: <span id="kneeling-detected">No</span>
     </div>
     <div class="buttons">
       <button class="alert" id="btn-stop-monitoring">Stop Monitoring</button>
@@ -150,13 +79,11 @@
 <script>
   const PASSWORD = "Mistress2025";
 
-  // Screen elements
   const screenSetup = document.getElementById('screen-setup');
   const screenCalibration = document.getElementById('screen-calibration');
   const screenMonitoring = document.getElementById('screen-monitoring');
   const screenAlert = document.getElementById('screen-alert');
 
-  // Buttons
   const btnSetDuration = document.getElementById('btn-set-duration');
   const btnStartCalibration = document.getElementById('btn-start-calibration');
   const btnStopMonitoring = document.getElementById('btn-stop-monitoring');
@@ -164,18 +91,23 @@
   const btnRetryCalibration = document.getElementById('btn-retry-calibration');
   const btnDismissAlert = document.getElementById('btn-dismiss-alert');
 
-  // Inputs and display
   const inputPassword = document.getElementById('password');
   const inputDuration = document.getElementById('duration');
   const setupError = document.getElementById('setup-error');
   const timerDisplay = document.getElementById('timer');
+  const tiltAngleDisplay = document.getElementById('tilt-angle');
+  const kneelingDetectedDisplay = document.getElementById('kneeling-detected');
+  const kneelingStatusText = document.getElementById('kneeling-status');
 
-  // State
   let totalSeconds = 0;
   let remainingSeconds = 0;
   let timerInterval = null;
+  let kneeling = false;
 
-  // Helper to format time as HH:MM:SS
+  // Define acceptable kneeling tilt range in degrees (beta)
+  const KNEELING_MIN = 60;  // Adjust based on your calibration
+  const KNEELING_MAX = 110;
+
   function formatTime(sec) {
     const h = Math.floor(sec / 3600).toString().padStart(2, '0');
     const m = Math.floor((sec % 3600) / 60).toString().padStart(2, '0');
@@ -183,34 +115,35 @@
     return `${h}:${m}:${s}`;
   }
 
-  // Start countdown timer
   function startTimer() {
     timerDisplay.textContent = formatTime(remainingSeconds);
     timerInterval = setInterval(() => {
-      remainingSeconds--;
-      timerDisplay.textContent = formatTime(remainingSeconds);
-      if (remainingSeconds <= 0) {
-        clearInterval(timerInterval);
-        showAlert();
+      if (kneeling) {
+        remainingSeconds--;
+        timerDisplay.textContent = formatTime(remainingSeconds);
+        if (remainingSeconds <= 0) {
+          clearInterval(timerInterval);
+          showAlert();
+        }
       }
     }, 1000);
   }
 
-  // Stop countdown timer
   function stopTimer() {
     clearInterval(timerInterval);
   }
 
-  // Show alert screen
   function showAlert() {
     stopTimer();
+    kneelingStatusText.textContent = "❌ Kneeling Lost!";
+    kneelingStatusText.className = "status wrong";
+
     screenSetup.style.display = 'none';
     screenCalibration.style.display = 'none';
     screenMonitoring.style.display = 'none';
     screenAlert.style.display = 'block';
   }
 
-  // Reset and go to calibration
   function goToCalibration() {
     screenSetup.style.display = 'none';
     screenCalibration.style.display = 'block';
@@ -218,16 +151,15 @@
     screenAlert.style.display = 'none';
   }
 
-  // Go to monitoring screen and start timer
   function goToMonitoring() {
     screenSetup.style.display = 'none';
     screenCalibration.style.display = 'none';
     screenMonitoring.style.display = 'block';
     screenAlert.style.display = 'none';
+    kneelingStatusText.textContent = "✅ Kneeling Detected";
+    kneelingStatusText.className = "status correct";
     startTimer();
   }
-
-  // Button event handlers
 
   btnSetDuration.onclick = () => {
     setupError.style.display = 'none';
@@ -254,12 +186,13 @@
   };
 
   btnStartCalibration.onclick = () => {
-    // For demo, skip actual calibration logic
+    // For demo, no actual calibration needed, just start monitoring
     goToMonitoring();
   };
 
   btnStopMonitoring.onclick = () => {
     stopTimer();
+    window.removeEventListener('deviceorientation', handleOrientation);
     screenSetup.style.display = 'block';
     screenCalibration.style.display = 'none';
     screenMonitoring.style.display = 'none';
@@ -271,14 +204,69 @@
   };
 
   btnRetryCalibration.onclick = () => {
+    screenAlert.style.display = 'none';
     goToCalibration();
   };
 
   btnDismissAlert.onclick = () => {
-    // Restart monitoring with timer reset
     remainingSeconds = totalSeconds;
+    screenAlert.style.display = 'none';
     goToMonitoring();
   };
+
+  // Orientation event handler
+  function handleOrientation(event) {
+    let beta = event.beta; // front-to-back tilt: -180 to 180
+
+    if (beta === null) {
+      tiltAngleDisplay.textContent = "N/A";
+      kneelingDetectedDisplay.textContent = "No sensor data";
+      kneeling = false;
+      kneelingStatusText.textContent = "⚠️ Sensor data unavailable";
+      kneelingStatusText.className = "status wrong";
+      return;
+    }
+
+    tiltAngleDisplay.textContent = beta.toFixed(1);
+
+    if (beta >= KNEELING_MIN && beta <= KNEELING_MAX) {
+      // Kneeling detected
+      kneelingDetectedDisplay.textContent = "Yes";
+      kneelingStatusText.textContent = "✅ Kneeling Detected";
+      kneelingStatusText.className = "status correct";
+      kneeling = true;
+    } else {
+      kneelingDetectedDisplay.textContent = "No";
+      kneelingStatusText.textContent = "❌ Not Kneeling";
+      kneelingStatusText.className = "status wrong";
+      kneeling = false;
+      showAlert();
+    }
+  }
+
+  // Request permission for iOS 13+ devices
+  function requestOrientationPermission() {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission()
+        .then(permissionState => {
+          if (permissionState === 'granted') {
+            window.addEventListener('deviceorientation', handleOrientation);
+          } else {
+            alert('Permission denied for device orientation. App cannot track kneeling position.');
+          }
+        })
+        .catch(console.error);
+    } else {
+      // Non iOS 13+ device, just add listener
+      window.addEventListener('deviceorientation', handleOrientation);
+    }
+  }
+
+  // Start listening on monitoring screen show
+  btnStartCalibration.addEventListener('click', () => {
+    requestOrientationPermission();
+  });
+
 </script>
 </body>
 </html>
