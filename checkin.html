@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Slave Location Check-In</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f2ecf9;
+    padding: 20px;
+    color: #333;
+  }
+  h1 {
+    text-align: center;
+    color: #4b0076;
+  }
+  form {
+    max-width: 500px;
+    margin: auto;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  label {
+    display: block;
+    margin-top: 15px;
+  }
+  input, select, textarea, button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 6px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+  }
+  button {
+    background-color: #6d008f;
+    color: white;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    margin-top: 20px;
+  }
+  button:hover {
+    background-color: #53006c;
+  }
+  #geoStatus {
+    margin-top: 10px;
+    font-style: italic;
+    color: #555;
+    text-align: center;
+  }
+  #message {
+    margin-top: 20px;
+    text-align: center;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+
+<h1>📍 Slave Location Check-In</h1>
+
+<form id="checkinForm">
+  <label for="location">Select General Location:</label>
+  <select id="location" required>
+    <option value="">-- Choose --</option>
+    <option value="Home">Home</option>
+    <option value="Work">Work</option>
+    <option value="Store">Store</option>
+    <option value="Other">Other</option>
+  </select>
+
+  <label for="outfit">Describe Your Outfit:</label>
+  <textarea id="outfit" rows="3" placeholder="Detailed outfit description..." required></textarea>
+
+  <label for="photo">Upload Selfie Photo (required):</label>
+  <input type="file" id="photo" accept="image/*" capture="environment" required />
+
+  <div id="geoStatus">🔍 Fetching your GPS location...</div>
+
+  <button type="submit">📸 Submit Check-In</button>
+
+  <div id="message"></div>
+</form>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
+<script>
+  // Your Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyCdPnBSCz0xYXn-OqphFozbPqylqOu_sUw",
+    authDomain: "flr-checkin.firebaseapp.com",
+    projectId: "flr-checkin",
+    storageBucket: "flr-checkin.firebasestorage.app",
+    messagingSenderId: "783361914212",
+    appId: "1:783361914212:web:848bbde609f0af82a33671",
+    measurementId: "G-4T7N7QN3LR"
+  };
+
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const storage = firebase.storage();
+
+  let currentCoords = null;
+
+  // Get Geolocation on page load
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      currentCoords = pos.coords;
+      document.getElementById('geoStatus').textContent =
+        `📍 GPS Location found: Lat ${currentCoords.latitude.toFixed(5)}, Lon ${currentCoords.longitude.toFixed(5)}`;
+    },
+    (err) => {
+      document.getElementById('geoStatus').textContent = "⚠️ Unable to fetch location. Please allow GPS.";
+    }
+  );
+
+  const form = document.getElementById('checkinForm');
+  const messageEl = document.getElementById('message');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    messageEl.textContent = '';
+    if (!currentCoords) {
+      alert('GPS location not found yet or permission denied. Please enable location to submit.');
+      return;
+    }
+
+    const location = document.getElementById('location').value;
+    const outfit = document.getElementById('outfit').value.trim();
+    const photoInput = document.getElementById('photo');
+
+    if (!location || !outfit || !photoInput.files[0]) {
+      alert('All fields and photo are required.');
+      return;
+    }
+
+    try {
+      messageEl.textContent = '⏳ Uploading photo and saving check-in...';
+
+      // Upload photo to Firebase Storage
+      const file = photoInput.files[0];
+      const storageRef = storage.ref();
+      const filename = `selfies/${Date.now()}_${file.name}`;
+      const selfieRef = storageRef.child(filename);
+      await selfieRef.put(file);
+      const selfieUrl = await selfieRef.getDownloadURL();
+
+      // Save check-in data to Firestore
+      await db.collection('checkins').add({
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        location,
+        outfit,
+        selfieUrl,
+        gps: {
+          latitude: currentCoords.latitude,
+          longitude: currentCoords.longitude,
+        }
+      });
+
+      messageEl.style.color = 'green';
+      messageEl.textContent = '✅ Check-in saved successfully!';
+
+      form.reset();
+      document.getElementById('geoStatus').textContent = "🔍 Awaiting next GPS update...";
+      currentCoords = null;
+
+      // Try to get new GPS after submission
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          currentCoords = pos.coords;
+          document.getElementById('geoStatus').textContent =
+            `📍 GPS Location found: Lat ${currentCoords.latitude.toFixed(5)}, Lon ${currentCoords.longitude.toFixed(5)}`;
+        },
+        () => {
+          document.getElementById('geoStatus').textContent = "⚠️ Unable to fetch location.";
+        }
+      );
+
+    } catch (error) {
+      messageEl.style.color = 'red';
+      messageEl.textContent = '❌ Error saving check-in: ' + error.message;
+      console.error(error);
+    }
+  });
+</script>
+
+</body>
+</html>
