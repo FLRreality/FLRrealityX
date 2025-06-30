@@ -1,334 +1,232 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Kneeling Time Tracker</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 400px;
-      margin: 2rem auto;
-      padding: 1rem;
-      text-align: center;
-      background: #f9f9f9;
-      color: #222;
-    }
-    h1 {
-      color: #d6336c;
-    }
-    .timer {
-      font-size: 2.5rem;
-      margin: 1rem 0;
-    }
-    .status {
-      font-weight: bold;
-      margin-bottom: 1rem;
-      color: green;
-    }
-    .status.inactive {
-      color: red;
-    }
-    button {
-      background: #d6336c;
-      color: white;
-      border: none;
-      padding: 0.6rem 1.2rem;
-      margin: 0.5rem;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 1rem;
-    }
-    button:disabled {
-      background: #aaa;
-      cursor: not-allowed;
-    }
-    input {
-      padding: 0.4rem;
-      font-size: 1rem;
-      width: 80%;
-      margin: 0.5rem 0;
-    }
-    .time-stats {
-      margin: 1rem 0;
-      font-size: 1.1rem;
-      background: #ffe3ec;
-      padding: 0.8rem;
-      border-radius: 6px;
-    }
-    #passwordPrompt {
-      display: none;
-      margin-top: 1rem;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kneeling Time Tracker</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 1em;
+    text-align: center;
+  }
+  #status {
+    margin: 1em 0;
+    font-weight: bold;
+  }
+  #timer {
+    font-size: 3em;
+    margin: 1em 0;
+  }
+  button {
+    font-size: 1.2em;
+    margin: 0.5em;
+    padding: 0.5em 1em;
+  }
+  #passwordPrompt {
+    display: none;
+    margin-top: 1em;
+  }
+  #passwordPrompt input {
+    font-size: 1em;
+    padding: 0.3em;
+  }
+</style>
 </head>
 <body>
 
-  <h1>Kneeling Time Tracker</h1>
+<h1>Kneeling Time Tracker</h1>
 
-  <div id="inputSection">
-    <label>
-      Enter duration (minutes):<br />
-      <input type="number" id="durationInput" min="1" max="1440" value="10" />
-    </label>
-    <br />
-    <label>
-      Enter Mistress-set password:<br />
-      <input type="password" id="passwordInput" />
-    </label>
-    <br />
-    <button id="startBtn">Start Kneeling</button>
-  </div>
+<label>
+  Kneeling duration (minutes):
+  <input type="number" id="durationInput" min="1" max="180" value="5" />
+</label>
+<br /><br />
 
-  <div id="trackerSection" style="display:none;">
-    <div class="timer" id="sessionTimer">00:00:00</div>
-    <div id="status" class="status inactive">Waiting for proper kneeling position...</div>
+<label>
+  Mistress Password:
+  <input type="password" id="mistressPasswordInput" placeholder="Set password" minlength="4" />
+</label>
+<br /><br />
 
-    <div class="time-stats">
-      <div>Daily kneeling time: <span id="dailyTime">00:00:00</span></div>
-      <div>Weekly kneeling time: <span id="weeklyTime">00:00:00</span></div>
-    </div>
+<button id="requestPermBtn">Request Motion Permission (iOS)</button>
+<button id="startBtn" disabled>Start Kneeling</button>
+<button id="stopBtn" disabled>Stop Kneeling</button>
 
-    <button id="stopBtn" disabled>Stop Kneeling (Enter Password)</button>
+<div id="status">Please request motion permission first</div>
+<div id="timer">00:00</div>
 
-    <div id="passwordPrompt">
-      <input type="password" id="stopPasswordInput" placeholder="Enter password to stop" />
-      <button id="confirmStopBtn">Confirm Stop</button>
-    </div>
-  </div>
+<div id="passwordPrompt">
+  <label>Enter Mistress Password to Stop:
+    <input type="password" id="stopPasswordInput" />
+  </label>
+  <button id="confirmStopBtn">Confirm</button>
+</div>
 
-  <script>
-    // Mistress-set password storage (in real app, set securely server-side)
-    let mistressPassword = '';
+<script>
+  const requestPermBtn = document.getElementById('requestPermBtn');
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const statusElem = document.getElementById('status');
+  const timerElem = document.getElementById('timer');
+  const durationInput = document.getElementById('durationInput');
+  const mistressPasswordInput = document.getElementById('mistressPasswordInput');
 
-    let sessionSeconds = 0;
-    let timerInterval = null;
-    let isTimerRunning = false;
-    let warningInterval = null;
-    let warningActive = false;
+  const passwordPrompt = document.getElementById('passwordPrompt');
+  const stopPasswordInput = document.getElementById('stopPasswordInput');
+  const confirmStopBtn = document.getElementById('confirmStopBtn');
 
-    const sessionTimerElem = document.getElementById('sessionTimer');
-    const statusElem = document.getElementById('status');
-    const dailyTimeElem = document.getElementById('dailyTime');
-    const weeklyTimeElem = document.getElementById('weeklyTime');
-    const startBtn = document.getElementById('startBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const inputSection = document.getElementById('inputSection');
-    const trackerSection = document.getElementById('trackerSection');
-    const durationInput = document.getElementById('durationInput');
-    const passwordInput = document.getElementById('passwordInput');
-    const passwordPrompt = document.getElementById('passwordPrompt');
-    const stopPasswordInput = document.getElementById('stopPasswordInput');
-    const confirmStopBtn = document.getElementById('confirmStopBtn');
+  let mistressPassword = '';
+  let kneelingDurationSeconds = 0;  // total seconds to kneel
+  let sessionSeconds = 0;
+  let timerInterval = null;
+  let isTimerRunning = false;
+  let permissionGranted = false;
 
-    // Helper: format seconds as HH:MM:SS
-    function formatTime(secs) {
-      const h = Math.floor(secs / 3600).toString().padStart(2, '0');
-      const m = Math.floor((secs % 3600) / 60).toString().padStart(2, '0');
-      const s = (secs % 60).toString().padStart(2, '0');
-      return `${h}:${m}:${s}`;
-    }
+  function formatTime(s) {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+  }
 
-    // Load daily and weekly times from localStorage
-    function loadTimes() {
-      const now = new Date();
-      const todayKey = 'kneeling_daily_' + now.toISOString().slice(0,10);
-      const weekNum = getWeekNumber(now);
-      const weeklyKey = 'kneeling_weekly_' + now.getFullYear() + '_w' + weekNum;
+  function updateDisplay() {
+    timerElem.textContent = formatTime(sessionSeconds);
+  }
 
-      const daily = parseInt(localStorage.getItem(todayKey)) || 0;
-      const weekly = parseInt(localStorage.getItem(weeklyKey)) || 0;
+  function startTimer() {
+    if (isTimerRunning) return;
+    if (sessionSeconds >= kneelingDurationSeconds) return; // already done
 
-      return { dailyKey: todayKey, weeklyKey: weeklyKey, daily, weekly };
-    }
-
-    // Save updated times to localStorage
-    function saveTimes(dailyKey, weeklyKey, daily, weekly) {
-      localStorage.setItem(dailyKey, daily);
-      localStorage.setItem(weeklyKey, weekly);
-    }
-
-    // Get ISO week number helper
-    function getWeekNumber(d) {
-      d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-      const dayNum = d.getUTCDay() || 7;
-      d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-      const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-      return Math.ceil(((d - yearStart) / 86400000 + 1)/7);
-    }
-
-    let { dailyKey, weeklyKey, daily, weekly } = loadTimes();
-
-    // Update displayed timers
-    function updateDisplay() {
-      sessionTimerElem.textContent = formatTime(sessionSeconds);
-      dailyTimeElem.textContent = formatTime(daily);
-      weeklyTimeElem.textContent = formatTime(weekly);
-    }
-
-    // Timer tick handler
-    function tick() {
+    isTimerRunning = true;
+    statusElem.textContent = 'Kneeling timer running... Keep phone flat.';
+    timerInterval = setInterval(() => {
       sessionSeconds++;
-      daily++;
-      weekly++;
       updateDisplay();
-      saveTimes(dailyKey, weeklyKey, daily, weekly);
 
-      // Check if duration reached
-      if (sessionSeconds >= targetSeconds) {
+      if (sessionSeconds >= kneelingDurationSeconds) {
         stopTimer(true);
-        alert("Congratulations, kneeling duration complete!");
+        alert('Kneeling session complete!');
       }
+    }, 1000);
+    stopBtn.disabled = false;
+  }
+
+  function pauseTimer() {
+    if (!isTimerRunning) return;
+    clearInterval(timerInterval);
+    isTimerRunning = false;
+    statusElem.textContent = 'Phone moved! Timer paused. Place phone flat again.';
+    stopBtn.disabled = true;
+  }
+
+  function stopTimer(completed) {
+    clearInterval(timerInterval);
+    isTimerRunning = false;
+    stopBtn.disabled = true;
+    startBtn.disabled = false;
+    requestPermBtn.disabled = false;
+
+    if (completed) {
+      statusElem.textContent = 'Session complete! Well done.';
+    } else {
+      statusElem.textContent = 'Timer stopped by Mistress.';
     }
+  }
 
-    // Start timer
-    function startTimer() {
-      if (!isTimerRunning) {
-        isTimerRunning = true;
-        statusElem.textContent = 'Proper kneeling position detected — Timer running';
-        statusElem.classList.remove('inactive');
-        stopBtn.disabled = false;
+  function handleOrientation(e) {
+    if (!isTimerRunning) {
+      // Check if phone is flat (beta and gamma near 0)
+      if (e.beta !== null && e.gamma !== null) {
+        // Debug
+        console.log(`Orientation beta: ${e.beta.toFixed(2)}, gamma: ${e.gamma.toFixed(2)}`);
 
-        timerInterval = setInterval(tick, 1000);
-        stopWarningMessages();
-      }
-    }
-
-    // Stop timer
-    // forceStop means the duration was completed; ignore password check
-    function stopTimer(forceStop = false) {
-      if (isTimerRunning) {
-        clearInterval(timerInterval);
-        isTimerRunning = false;
-        stopBtn.disabled = true;
-
-        if (forceStop) {
-          statusElem.textContent = 'Kneeling duration completed.';
-          statusElem.classList.remove('inactive');
-        } else {
-          statusElem.textContent = 'Timer stopped by Mistress password.';
-          statusElem.classList.remove('inactive');
-        }
-        stopWarningMessages();
-      }
-    }
-
-    // Show warning messages repeatedly every 3 seconds
-    function startWarningMessages() {
-      if (warningActive) return;
-      warningActive = true;
-      statusElem.textContent = 'Phone not in correct position — Timer paused';
-      statusElem.classList.add('inactive');
-
-      warningInterval = setInterval(() => {
-        statusElem.textContent = 'Phone not in correct position — Timer paused';
-      }, 3000);
-    }
-
-    // Stop warning messages
-    function stopWarningMessages() {
-      warningActive = false;
-      clearInterval(warningInterval);
-    }
-
-    // Device orientation check
-    function handleOrientation(event) {
-      if (!isTimerRunning) return; // timer not started yet
-
-      const beta = event.beta;   // front-back tilt [-180..180]
-      const gamma = event.gamma; // left-right tilt [-90..90]
-
-      // Acceptable range ±10 degrees around 0 (lying flat)
-      if (Math.abs(beta) < 10 && Math.abs(gamma) < 10) {
-        // Proper position, keep timer running
-        if (!isTimerRunning) startTimer();
-        stopWarningMessages();
-      } else {
-        // Improper position, pause timer
-        if (isTimerRunning) {
-          clearInterval(timerInterval);
-          startWarningMessages();
-        }
-      }
-    }
-
-    // On start button click
-    let targetSeconds = 0;
-    startBtn.onclick = () => {
-      const duration = parseInt(durationInput.value);
-      const pwd = passwordInput.value.trim();
-
-      if (isNaN(duration) || duration <= 0) {
-        alert("Please enter a valid kneeling duration (minutes).");
-        return;
-      }
-      if (pwd.length < 4) {
-        alert("Please enter Mistress-set password (min 4 chars).");
-        return;
-      }
-
-      mistressPassword = pwd;
-      targetSeconds = duration * 60;
-
-      // Hide inputs, show timer section
-      inputSection.style.display = 'none';
-      trackerSection.style.display = 'block';
-
-      statusElem.textContent = 'Place phone flat on floor to start timer';
-      statusElem.classList.add('inactive');
-
-      sessionSeconds = 0;
-      updateDisplay();
-      stopBtn.disabled = true;
-
-      window.addEventListener('deviceorientation', deviceOrientationListener, true);
-    };
-
-    // Handle device orientation changes to control timer start/pause
-    let lastOrientationEvent = null;
-    function deviceOrientationListener(e) {
-      lastOrientationEvent = e;
-      if (!isTimerRunning) {
-        // Check if phone is flat to start timer
         if (Math.abs(e.beta) < 10 && Math.abs(e.gamma) < 10) {
           startTimer();
         }
-      } else {
-        // If timer running, check if moved out of range
+      }
+    } else {
+      // Timer running, pause if phone moved
+      if (e.beta !== null && e.gamma !== null) {
         if (Math.abs(e.beta) >= 10 || Math.abs(e.gamma) >= 10) {
-          clearInterval(timerInterval);
-          startWarningMessages();
-          isTimerRunning = false;
-          stopBtn.disabled = true;
+          pauseTimer();
         }
       }
     }
+  }
 
-    // Stop button click - show password prompt
-    stopBtn.onclick = () => {
-      passwordPrompt.style.display = 'block';
-      stopPasswordInput.value = '';
-      stopPasswordInput.focus();
-    };
+  requestPermBtn.onclick = () => {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission()
+        .then(response => {
+          if (response === 'granted') {
+            permissionGranted = true;
+            statusElem.textContent = 'Permission granted. You may now start.';
+            requestPermBtn.disabled = true;
+            startBtn.disabled = false;
 
-    // Confirm stop password
-    confirmStopBtn.onclick = () => {
-      const enteredPwd = stopPasswordInput.value.trim();
-      if (enteredPwd === mistressPassword) {
-        stopTimer(false);
-        passwordPrompt.style.display = 'none';
-        window.removeEventListener('deviceorientation', deviceOrientationListener);
-      } else {
-        alert("Incorrect password. Timer cannot be stopped.");
-        stopPasswordInput.value = '';
-        stopPasswordInput.focus();
-      }
-    };
+            window.addEventListener('deviceorientation', handleOrientation, true);
+          } else {
+            statusElem.textContent = 'Permission denied.';
+          }
+        })
+        .catch(err => {
+          statusElem.textContent = 'Error requesting permission: ' + err;
+        });
+    } else {
+      // Non iOS devices or older versions
+      permissionGranted = true;
+      statusElem.textContent = 'Permission not needed. You may start.';
+      requestPermBtn.disabled = true;
+      startBtn.disabled = false;
 
-    // Initialize display
+      window.addEventListener('deviceorientation', handleOrientation, true);
+    }
+  };
+
+  startBtn.onclick = () => {
+    const durationMin = parseInt(durationInput.value, 10);
+    const pwd = mistressPasswordInput.value.trim();
+
+    if (!durationMin || durationMin < 1) {
+      alert('Please enter a valid kneeling duration (minimum 1 minute).');
+      return;
+    }
+    if (pwd.length < 4) {
+      alert('Mistress password must be at least 4 characters.');
+      return;
+    }
+
+    mistressPassword = pwd;
+    kneelingDurationSeconds = durationMin * 60;
+    sessionSeconds = 0;
     updateDisplay();
 
-  </script>
+    statusElem.textContent = 'Place phone flat on floor (screen up) to start timer.';
+    startBtn.disabled = true;
+    stopBtn.disabled = true;
+  };
+
+  stopBtn.onclick = () => {
+    passwordPrompt.style.display = 'block';
+    stopPasswordInput.value = '';
+    stopPasswordInput.focus();
+  };
+
+  confirmStopBtn.onclick = () => {
+    const enteredPwd = stopPasswordInput.value.trim();
+    if (enteredPwd === mistressPassword) {
+      stopTimer(false);
+      passwordPrompt.style.display = 'none';
+    } else {
+      alert('Incorrect password. Timer cannot be stopped.');
+      stopPasswordInput.value = '';
+      stopPasswordInput.focus();
+    }
+  };
+
+</script>
 
 </body>
 </html>
