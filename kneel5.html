@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kneeling Timer - Mistress Control</title>
+  <style>
+    body {
+      background: linear-gradient(to bottom, #550000, #220000);
+      color: #ffcccc;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      font-size: 2.5em;
+      color: #ff3366;
+    }
+    video {
+      width: 100%;
+      max-width: 400px;
+      border: 3px solid #ff3366;
+      margin-bottom: 10px;
+    }
+    input, button {
+      padding: 10px;
+      margin: 10px;
+      font-size: 1.2em;
+      background-color: #330000;
+      color: #ffcccc;
+      border: 1px solid #ff3366;
+      border-radius: 5px;
+    }
+    #motionAlert {
+      font-size: 1.5em;
+      color: red;
+      font-weight: bold;
+      margin: 15px 0;
+    }
+    #status {
+      font-size: 1.2em;
+      margin: 15px 0;
+    }
+    #punishmentCount, #insultElem {
+      font-size: 1.2em;
+      color: #ff9999;
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Kneel for Your Mistress</h1>
+  <video id="video" autoplay playsinline></video>
+  <br>
+  <input type="password" id="mistressPassword" placeholder="Mistress Password">
+  <input type="number" id="duration" placeholder="Minutes to Kneel" min="1">
+  <button id="startBtn">Start Kneeling</button>
+  <button id="stopBtn" disabled>Stop</button>
+  <div id="status"></div>
+  <div id="motionAlert">MOTION DETECTED! REMAIN STILL!</div>
+  <div id="punishmentCount">Punishment Count: 0</div>
+  <div id="insultElem"></div>
+  <canvas id="canvas" style="display: none;"></canvas>
+
+<script>
+  let video = document.getElementById("video");
+  let canvas = document.getElementById("canvas");
+  let ctx = canvas.getContext("2d");
+  let motionAlert = document.getElementById("motionAlert");
+  let statusElem = document.getElementById("status");
+  let insultElem = document.getElementById("insultElem");
+  let punishmentCountElem = document.getElementById("punishmentCount");
+  let durationInput = document.getElementById("duration");
+  let mistressPasswordInput = document.getElementById("mistressPassword");
+  let startBtn = document.getElementById("startBtn");
+  let stopBtn = document.getElementById("stopBtn");
+
+  let baselineFrameData = null;
+  let baselineFramesCaptured = 0;
+  let motionDetected = false;
+  let timerInterval, motionCheckInterval;
+  let punishmentCount = 0;
+  let videoStream = null;
+
+  const motionPixelsThreshold = 2500;
+  const baselineCaptureFramesNeeded = 15;
+  const mistressPassword = "mistress";
+
+  const insults = [
+    "Your weakness is showing.",
+    "Still kneeling? You should be.",
+    "Even breathing is a privilege.",
+    "You're nothing but furniture.",
+    "Movement? I didn't allow that.",
+    "Tremble like the worm you are.",
+    "Look at yourself – pitiful.",
+    "You obey because you're beneath me."
+  ];
+
+  async function startVideo() {
+    try {
+      videoStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false
+      });
+      video.srcObject = videoStream;
+    } catch (err) {
+      alert("Camera access denied.");
+    }
+  }
+
+  function captureFrame() {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return ctx.getImageData(0, 0, canvas.width, canvas.height);
+  }
+
+  function checkMotion() {
+    let currentFrame = captureFrame();
+    if (!baselineFrameData) {
+      if (baselineFramesCaptured < baselineCaptureFramesNeeded) {
+        baselineFrameData = currentFrame;
+        baselineFramesCaptured++;
+        return;
+      }
+    }
+
+    let motionPixels = 0;
+    for (let i = 0; i < currentFrame.data.length; i += 4) {
+      let diff = Math.abs(currentFrame.data[i] - baselineFrameData.data[i]) +
+                 Math.abs(currentFrame.data[i+1] - baselineFrameData.data[i+1]) +
+                 Math.abs(currentFrame.data[i+2] - baselineFrameData.data[i+2]);
+      if (diff > 50) motionPixels++;
+    }
+
+    if (motionPixels > motionPixelsThreshold) {
+      motionDetected = true;
+      clearInterval(timerInterval);
+      motionAlert.style.visibility = 'visible';
+      punishmentCount++;
+      punishmentCountElem.textContent = "Punishment Count: " + punishmentCount;
+      statusElem.textContent = "MOVEMENT DETECTED! Timer paused.";
+    } else {
+      motionDetected = false;
+      motionAlert.style.visibility = 'hidden';
+    }
+  }
+
+  function startTimer(duration) {
+    let seconds = duration * 60;
+    timerInterval = setInterval(() => {
+      if (!motionDetected) {
+        seconds--;
+        statusElem.textContent = "Time Remaining: " + Math.floor(seconds / 60) + ":" + ("0" + (seconds % 60)).slice(-2);
+        if (seconds <= 0) {
+          clearInterval(timerInterval);
+          statusElem.textContent = "Kneeling time complete. Await further instructions.";
+        }
+      }
+    }, 1000);
+
+    setInterval(() => {
+      if (!motionDetected) {
+        insultElem.textContent = insults[Math.floor(Math.random() * insults.length)];
+      }
+    }, 30000);
+  }
+
+  startBtn.onclick = async () => {
+    if (mistressPasswordInput.value !== mistressPassword) {
+      alert("Incorrect Mistress password.");
+      return;
+    }
+
+    await startVideo();
+    document.documentElement.requestFullscreen().catch(()=>{});
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    durationInput.disabled = true;
+    mistressPasswordInput.disabled = true;
+
+    baselineFrameData = null;
+    baselineFramesCaptured = 0;
+    motionDetected = false;
+    motionAlert.style.visibility = 'hidden';
+    statusElem.textContent = 'CALIBRATING POSTURE... DO NOT MOVE!';
+
+    motionCheckInterval = setInterval(checkMotion, 150);
+
+    const waitForCalibration = () => {
+      return new Promise((resolve) => {
+        const checkCalib = setInterval(() => {
+          if (baselineFramesCaptured >= baselineCaptureFramesNeeded) {
+            clearInterval(checkCalib);
+            resolve();
+          }
+        }, 100);
+      });
+    };
+
+    await waitForCalibration();
+    if (!motionDetected) {
+      statusElem.textContent = 'STARTING TIMER...';
+      startTimer(parseInt(durationInput.value));
+    }
+  };
+
+  stopBtn.onclick = () => {
+    if (mistressPasswordInput.value !== mistressPassword) {
+      alert("Only Mistress can stop the timer.");
+      return;
+    }
+    clearInterval(timerInterval);
+    clearInterval(motionCheckInterval);
+    if (videoStream) {
+      videoStream.getTracks().forEach(track => track.stop());
+    }
+    statusElem.textContent = "Session ended by Mistress.";
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    durationInput.disabled = false;
+    mistressPasswordInput.disabled = false;
+  };
+
+  window.addEventListener('beforeunload', function (e) {
+    if (timerInterval) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+</script>
+
+</body>
+</html>
+
+</body>
+</html>
