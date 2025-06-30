@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Kneeling Enforcement Demo</title>
+<title>Kneeling Position Enforcement</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -17,7 +17,7 @@
   #app {
     border: 2px solid #ccc;
     border-radius: 12px;
-    width: 320px;
+    width: 350px;
     padding: 24px;
     box-shadow: 0 0 12px #aaa;
   }
@@ -25,9 +25,18 @@
     font-size: 1.3rem;
     margin-bottom: 12px;
   }
-  p {
+  p, label {
     font-size: 1rem;
-    margin-bottom: 24px;
+    margin-bottom: 12px;
+    display: block;
+  }
+  input[type="password"], input[type="number"] {
+    width: 100%;
+    padding: 8px 10px;
+    margin-bottom: 16px;
+    font-size: 1rem;
+    border: 1px solid #bbb;
+    border-radius: 6px;
   }
   button {
     font-size: 1rem;
@@ -78,13 +87,30 @@
   .buttons {
     text-align: center;
   }
+  .error {
+    color: #e74c3c;
+    font-weight: bold;
+    margin-bottom: 12px;
+  }
 </style>
 </head>
 <body>
 <div id="app">
 
+  <!-- Password & Duration Setup Screen -->
+  <div id="screen-setup">
+    <h1>Set Kneeling Duration</h1>
+    <p>Mistress, enter password to set kneeling time (minutes):</p>
+    <input type="password" id="password" placeholder="Password" autocomplete="off" />
+    <input type="number" id="duration" placeholder="Duration in minutes" min="1" max="480" />
+    <div class="error" id="setup-error" style="display:none;"></div>
+    <div class="buttons">
+      <button class="primary" id="btn-set-duration">Set Duration</button>
+    </div>
+  </div>
+
   <!-- Calibration Screen -->
-  <div id="screen-calibration">
+  <div id="screen-calibration" style="display:none;">
     <h1>Kneeling Position Calibration</h1>
     <p>Please kneel in your proper position.<br />Hold or place your phone as instructed (e.g., on the floor in front of you).<br />Press Start Calibration to record your baseline.</p>
     <div class="buttons">
@@ -122,21 +148,34 @@
 </div>
 
 <script>
+  const PASSWORD = "Mistress2025";
+
+  // Screen elements
+  const screenSetup = document.getElementById('screen-setup');
   const screenCalibration = document.getElementById('screen-calibration');
   const screenMonitoring = document.getElementById('screen-monitoring');
   const screenAlert = document.getElementById('screen-alert');
 
+  // Buttons
+  const btnSetDuration = document.getElementById('btn-set-duration');
   const btnStartCalibration = document.getElementById('btn-start-calibration');
   const btnStopMonitoring = document.getElementById('btn-stop-monitoring');
   const btnTriggerAlert = document.getElementById('btn-trigger-alert');
   const btnRetryCalibration = document.getElementById('btn-retry-calibration');
   const btnDismissAlert = document.getElementById('btn-dismiss-alert');
 
+  // Inputs and display
+  const inputPassword = document.getElementById('password');
+  const inputDuration = document.getElementById('duration');
+  const setupError = document.getElementById('setup-error');
   const timerDisplay = document.getElementById('timer');
 
+  // State
+  let totalSeconds = 0;
+  let remainingSeconds = 0;
   let timerInterval = null;
-  let seconds = 0;
 
+  // Helper to format time as HH:MM:SS
   function formatTime(sec) {
     const h = Math.floor(sec / 3600).toString().padStart(2, '0');
     const m = Math.floor((sec % 3600) / 60).toString().padStart(2, '0');
@@ -144,52 +183,101 @@
     return `${h}:${m}:${s}`;
   }
 
+  // Start countdown timer
   function startTimer() {
-    seconds = 0;
-    timerDisplay.textContent = formatTime(seconds);
+    timerDisplay.textContent = formatTime(remainingSeconds);
     timerInterval = setInterval(() => {
-      seconds++;
-      timerDisplay.textContent = formatTime(seconds);
+      remainingSeconds--;
+      timerDisplay.textContent = formatTime(remainingSeconds);
+      if (remainingSeconds <= 0) {
+        clearInterval(timerInterval);
+        showAlert();
+      }
     }, 1000);
   }
 
+  // Stop countdown timer
   function stopTimer() {
     clearInterval(timerInterval);
   }
 
-  btnStartCalibration.onclick = () => {
+  // Show alert screen
+  function showAlert() {
+    stopTimer();
+    screenSetup.style.display = 'none';
+    screenCalibration.style.display = 'none';
+    screenMonitoring.style.display = 'none';
+    screenAlert.style.display = 'block';
+  }
+
+  // Reset and go to calibration
+  function goToCalibration() {
+    screenSetup.style.display = 'none';
+    screenCalibration.style.display = 'block';
+    screenMonitoring.style.display = 'none';
+    screenAlert.style.display = 'none';
+  }
+
+  // Go to monitoring screen and start timer
+  function goToMonitoring() {
+    screenSetup.style.display = 'none';
     screenCalibration.style.display = 'none';
     screenMonitoring.style.display = 'block';
     screenAlert.style.display = 'none';
     startTimer();
+  }
+
+  // Button event handlers
+
+  btnSetDuration.onclick = () => {
+    setupError.style.display = 'none';
+    const pw = inputPassword.value.trim();
+    const dur = parseInt(inputDuration.value, 10);
+
+    if (pw !== PASSWORD) {
+      setupError.textContent = "Incorrect password!";
+      setupError.style.display = 'block';
+      return;
+    }
+    if (!dur || dur < 1 || dur > 480) {
+      setupError.textContent = "Duration must be between 1 and 480 minutes.";
+      setupError.style.display = 'block';
+      return;
+    }
+
+    totalSeconds = dur * 60;
+    remainingSeconds = totalSeconds;
+    inputPassword.value = "";
+    inputDuration.value = "";
+
+    goToCalibration();
+  };
+
+  btnStartCalibration.onclick = () => {
+    // For demo, skip actual calibration logic
+    goToMonitoring();
   };
 
   btnStopMonitoring.onclick = () => {
     stopTimer();
-    screenCalibration.style.display = 'block';
+    screenSetup.style.display = 'block';
+    screenCalibration.style.display = 'none';
     screenMonitoring.style.display = 'none';
     screenAlert.style.display = 'none';
   };
 
   btnTriggerAlert.onclick = () => {
-    stopTimer();
-    screenCalibration.style.display = 'none';
-    screenMonitoring.style.display = 'none';
-    screenAlert.style.display = 'block';
+    showAlert();
   };
 
   btnRetryCalibration.onclick = () => {
-    screenCalibration.style.display = 'block';
-    screenMonitoring.style.display = 'none';
-    screenAlert.style.display = 'none';
+    goToCalibration();
   };
 
   btnDismissAlert.onclick = () => {
-    // Back to monitoring after dismissing alert
-    screenCalibration.style.display = 'none';
-    screenMonitoring.style.display = 'block';
-    screenAlert.style.display = 'none';
-    startTimer();
+    // Restart monitoring with timer reset
+    remainingSeconds = totalSeconds;
+    goToMonitoring();
   };
 </script>
 </body>
