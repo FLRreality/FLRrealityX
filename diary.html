@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FLR Diary - Submissive Entry</title>
+
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 2em auto; padding: 1em; }
+    label { display: block; margin-top: 1em; }
+    textarea { width: 100%; height: 120px; }
+    select, button { font-size: 1em; padding: 0.5em; margin-top: 0.5em; }
+    #status { margin-top: 1em; font-weight: bold; color: green; }
+    #status.error { color: red; }
+  </style>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbwwg2NhmCJRSt4SI0VFQIanZSX1SY4CWOeoSUmJsPh4AaPACfi_ERS4wVpdcykmabHe-w/exec";
+
+    async function submitDiary() {
+      const mood = document.getElementById("mood").value;
+      const entry = document.getElementById("entry").value.trim();
+      const statusEl = document.getElementById("status");
+
+      if (!entry) {
+        alert("Please write something in the diary.");
+        return;
+      }
+
+      const payload = JSON.stringify({ mood, entry });
+
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: payload
+        });
+
+        const result = await response.text();
+        console.log("HTTP Status:", response.status);
+        console.log("Server Response:", result);
+
+        if (response.ok && result.includes("Success")) {
+          statusEl.textContent = "✅ Entry saved successfully!";
+          statusEl.className = "";
+          document.getElementById("entry").value = "";
+        } else {
+          statusEl.textContent = `❌ Error (${response.status}): ${result}`;
+          statusEl.className = "error";
+        }
+      } catch (err) {
+        console.error("Network or script error:", err);
+        statusEl.textContent = "❌ Network or script error. Check console.";
+        statusEl.className = "error";
+      }
+    }
+
+    // Manifest + Service Worker
+    const manifestJSON = {
+      "name": "FLR Diary",
+      "short_name": "FLRDiary",
+      "start_url": ".",
+      "display": "standalone",
+      "background_color": "#ffffff",
+      "theme_color": "#e91e63",
+      "icons": [{
+        "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23e91e63' d='M12 2C8.13 2 5 5.13 5 9c0 4.42 7 13 7 13s7-8.58 7-13c0-3.87-3.13-7-7-7z'/%3E%3C/svg%3E",
+        "sizes": "512x512",
+        "type": "image/svg+xml"
+      }]
+    };
+
+    function injectManifest() {
+      const manifestBlob = new Blob([JSON.stringify(manifestJSON)], { type: "application/json" });
+      const manifestURL = URL.createObjectURL(manifestBlob);
+      const link = document.createElement("link");
+      link.rel = "manifest";
+      link.href = manifestURL;
+      document.head.appendChild(link);
+    }
+
+    const swScript = `
+      self.addEventListener('install', event => {
+        event.waitUntil(self.skipWaiting());
+      });
+      self.addEventListener('activate', event => {
+        event.waitUntil(self.clients.claim());
+      });
+      self.addEventListener('fetch', event => {
+        event.respondWith(fetch(event.request));
+      });
+    `;
+
+    async function registerSW() {
+      if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+        const blob = new Blob([swScript], { type: 'application/javascript' });
+        const swURL = URL.createObjectURL(blob);
+        try {
+          await navigator.serviceWorker.register(swURL);
+          console.log('✅ Service worker registered');
+        } catch (e) {
+          console.error('❌ Service worker registration failed:', e);
+        }
+      } else {
+        console.warn('⚠️ Service worker not registered (only works over http/https)');
+      }
+    }
+
+    window.addEventListener("load", () => {
+      injectManifest();
+      registerSW();
+    });
+  </script>
+</head>
+
+<body>
+  <h1>FLR Diary Entry</h1>
+  <label for="mood">Current Mood:</label>
+  <select id="mood">
+    <option value="😊">😊 Happy</option>
+    <option value="😐">😐 Neutral</option>
+    <option value="😞">😞 Sad</option>
+    <option value="😡">😡 Frustrated</option>
+    <option value="😴">😴 Tired</option>
+  </select>
+
+  <label for="entry">Diary Note:</label>
+  <textarea id="entry" placeholder="Write your submissive diary note here..."></textarea>
+
+  <button onclick="submitDiary()">Submit</button>
+  <p id="status"></p>
+</body>
+</html>
