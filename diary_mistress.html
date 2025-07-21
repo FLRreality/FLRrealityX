@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Mistress Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body { font-family: Arial, sans-serif; margin: 10px; }
+  label { display: block; margin-top: 10px; }
+  input, textarea { width: 100%; margin-top: 5px; }
+  button { margin-top: 10px; padding: 10px; width: 100%; }
+  .moodEntry, .taskEntry { border: 1px solid #ddd; padding: 10px; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<h2>Submissive Moods</h2>
+<div id="moods"></div>
+
+<h2>Assign New Task</h2>
+<form id="taskForm">
+  <label for="desc">Description:</label>
+  <textarea id="desc" required></textarea>
+
+  <label for="assignedDate">Assigned Date:</label>
+  <input type="date" id="assignedDate" required />
+
+  <label for="dueDate">Due Date:</label>
+  <input type="date" id="dueDate" required />
+
+  <label for="status">Status:</label>
+  <select id="status" required>
+    <option value="Pending">Pending</option>
+    <option value="In Progress">In Progress</option>
+    <option value="Done">Done</option>
+  </select>
+
+  <label for="notes">Notes (optional):</label>
+  <textarea id="notes"></textarea>
+
+  <button type="submit">Add Task</button>
+</form>
+
+<script>
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbz30MZ6uY7tLMeB9iZyPK5IdQOEYcq_rH_7IBqqZ8w4fL2CdxtP3XGiCIvZaJ7ejfA/exec'; // Replace
+
+  function loadMoods() {
+    fetch(GAS_URL + '?action=getMoods')
+      .then(res => res.json())
+      .then(moods => {
+        const container = document.getElementById('moods');
+        container.innerHTML = '';
+        moods.reverse().forEach(m => {
+          const div = document.createElement('div');
+          div.className = 'moodEntry';
+          div.innerHTML = `<strong>${new Date(m.Timestamp).toLocaleString()}</strong><br/>Mood: ${m.Mood}<br/>Notes: ${m.Notes}`;
+          container.appendChild(div);
+        });
+      });
+  }
+
+  document.getElementById('taskForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const description = document.getElementById('desc').value;
+    const assignedDate = document.getElementById('assignedDate').value;
+    const dueDate = document.getElementById('dueDate').value;
+    const status = document.getElementById('status').value;
+    const notes = document.getElementById('notes').value;
+
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({action:'addTask', description, assignedDate, dueDate, status, notes}),
+      headers: {'Content-Type': 'application/json'}
+    }).then(res => res.json()).then(data => {
+      alert('Task added.');
+      document.getElementById('taskForm').reset();
+    }).catch(() => alert('Failed to add task.'));
+  });
+
+  loadMoods();
+</script>
+
+</body>
+</html>

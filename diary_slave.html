@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Submissive Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body { font-family: Arial, sans-serif; margin: 10px; }
+  label { display: block; margin-top: 10px; }
+  select, textarea, input { width: 100%; margin-top: 5px; }
+  button { margin-top: 10px; padding: 10px; width: 100%; }
+  .task { border: 1px solid #ddd; padding: 10px; margin-top: 10px; }
+  .completed { background-color: #d4edda; }
+</style>
+</head>
+<body>
+
+<h2>Submit Your Mood</h2>
+<form id="moodForm">
+  <label for="mood">Mood:</label>
+  <select id="mood" required>
+    <option value="">Select mood</option>
+    <option value="Happy">Happy</option>
+    <option value="Sad">Sad</option>
+    <option value="Anxious">Anxious</option>
+    <option value="Excited">Excited</option>
+    <option value="Tired">Tired</option>
+  </select>
+
+  <label for="notes">Notes (optional):</label>
+  <textarea id="notes" rows="3"></textarea>
+
+  <button type="submit">Submit Mood</button>
+</form>
+
+<h2>Your Tasks</h2>
+<div id="tasks"></div>
+
+<script>
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbz30MZ6uY7tLMeB9iZyPK5IdQOEYcq_rH_7IBqqZ8w4fL2CdxtP3XGiCIvZaJ7ejfA/exec'; // replace with your deployed GAS web app URL
+
+  document.getElementById('moodForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const mood = document.getElementById('mood').value;
+    const notes = document.getElementById('notes').value;
+
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({action:'addMood', mood, notes}),
+      headers: {'Content-Type': 'application/json'}
+    }).then(res => res.json()).then(data => {
+      alert('Mood submitted!');
+      document.getElementById('moodForm').reset();
+    }).catch(err => alert('Error submitting mood.'));
+  });
+
+  function loadTasks() {
+    fetch(GAS_URL + '?action=getTasks')
+      .then(res => res.json())
+      .then(tasks => {
+        const container = document.getElementById('tasks');
+        container.innerHTML = '';
+        tasks.forEach(task => {
+          if(task.Status !== 'Done') {
+            const div = document.createElement('div');
+            div.className = 'task';
+            div.innerHTML = `
+              <strong>${task.Description}</strong><br/>
+              Due: ${task['Due Date']}<br/>
+              Status: ${task.Status}<br/>
+              <button onclick="markDone(${task['Task ID']})">Mark Done</button>
+            `;
+            container.appendChild(div);
+          }
+        });
+      });
+  }
+
+  function markDone(taskId) {
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({action:'updateTask', taskId, status:'Done'}),
+      headers: {'Content-Type': 'application/json'}
+    }).then(res => res.json())
+    .then(data => {
+      alert('Task marked done.');
+      loadTasks();
+    }).catch(() => alert('Failed to update task.'));
+  }
+
+  loadTasks();
+</script>
+
+</body>
+</html>
