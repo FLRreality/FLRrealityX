@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: Arial; padding: 1em; max-width: 500px; margin: auto; }
+      select, textarea, button { width: 100%; margin-top: 1em; padding: .5em; }
+      #status { margin-top: 1em; font-weight: bold; }
+      .error { color: red; }
+      .success { color: green; }
+    </style>
+  </head>
+  <body>
+    <h1>FLR Diary Entry</h1>
+
+    <label for="mood">Mood:</label>
+    <select id="mood">
+      <option value="😊">😊 Happy</option>
+      <option value="😐">😐 Neutral</option>
+      <option value="😞">😞 Sad</option>
+      <option value="😡">😡 Frustrated</option>
+      <option value="😴">😴 Tired</option>
+    </select>
+
+    <label for="entry">Diary Note:</label>
+    <textarea id="entry" rows="5" placeholder="Write your note here..."></textarea>
+
+    <button onclick="submitEntry()">Submit</button>
+
+    <div id="status"></div>
+
+    <script>
+      function submitEntry() {
+        const mood = document.getElementById('mood').value;
+        const entry = document.getElementById('entry').value.trim();
+        const status = document.getElementById('status');
+
+        if (!entry) {
+          status.textContent = 'Please enter a diary note.';
+          status.className = 'error';
+          return;
+        }
+
+        status.textContent = 'Submitting...';
+        status.className = '';
+
+        google.script.run
+          .withSuccessHandler(msg => {
+            status.textContent = '✅ ' + msg;
+            status.className = 'success';
+            document.getElementById('entry').value = '';
+          })
+          .withFailureHandler(err => {
+            status.textContent = '❌ Error: ' + err.message;
+            status.className = 'error';
+          })
+          .saveEntry(mood, entry);
+      }
+    </script>
+  </body>
+</html>
