@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Slave Task Submission</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f1f1f1; }
+    input, textarea, select, button {
+      width: 100%; padding: 10px; margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <h2>Submit Completed Task</h2>
+
+  <form id="taskForm">
+    <label>Task Name</label>
+    <input type="text" name="Task Name" required>
+
+    <label>Achievement</label>
+    <textarea name="Achievement" rows="3"></textarea>
+
+    <label>Completed</label>
+    <select name="Completed">
+      <option value="Yes">Yes</option>
+      <option value="No">No</option>
+    </select>
+
+    <button type="submit">Submit</button>
+  </form>
+
+  <div id="result"></div>
+
+  <script>
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbzjTxYpkZrejTgGvamgPOqwjYEVmQw3zdDKcpPwWok3KVTw8ZYxAl60RymA5IAyNbc6sw/exec';
+    document.getElementById('taskForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const form = e.target;
+      const data = {
+        "Task Name": form["Task Name"].value,
+        "Completed": form["Completed"].value,
+        "Achievement": form["Achievement"].value,
+        "Reviewed": "No"
+      };
+
+      const response = await fetch(scriptURL, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      document.getElementById('result').innerText = "Submitted!";
+      form.reset();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mistress Task Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #fff0f5; }
+    input, textarea, select, button {
+      width: 100%; padding: 10px; margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <h2>Assign Task to Submissive</h2>
+
+  <form id="assignForm">
+    <label>Task Name</label>
+    <input type="text" name="Task Name" required>
+
+    <label>Description</label>
+    <textarea name="Description" required></textarea>
+
+    <label>Priority</label>
+    <select name="Priority">
+      <option value="1">1 - Lowest</option>
+      <option value="2">2</option>
+      <option value="3" selected>3 - Medium</option>
+      <option value="4">4</option>
+      <option value="5">5 - Highest</option>
+    </select>
+
+    <button type="submit">Assign Task</button>
+  </form>
+
+  <h3>Pending Completions</h3>
+  <div id="taskList">Loading...</div>
+
+  <script>
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbzjTxYpkZrejTgGvamgPOqwjYEVmQw3zdDKcpPwWok3KVTw8ZYxAl60RymA5IAyNbc6sw/exec';
+
+    async function loadTasks() {
+      const res = await fetch(scriptURL);
+      const tasks = await res.json();
+
+      const pending = tasks.filter(t => t.Completed !== 'Yes');
+
+      document.getElementById('taskList').innerHTML = pending.map(t =>
+        `<b>${t["Task Name"]}</b> (Priority: ${t.Priority})<br>
+         Description: ${t.Description}<br><hr>`
+      ).join('');
+    }
+
+    document.getElementById('assignForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const form = e.target;
+      const data = {
+        "Task Name": form["Task Name"].value,
+        "Description": form["Description"].value,
+        "Priority": form["Priority"].value,
+        "Assigned Date": new Date().toLocaleDateString(),
+        "Completed": "No",
+        "Reviewed": "No"
+      };
+
+      const response = await fetch(scriptURL, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      alert("Task Assigned");
+      form.reset();
+      loadTasks();
+    });
+
+    loadTasks();
+  </script>
+</body>
+</html>
