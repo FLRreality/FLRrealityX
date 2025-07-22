@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sissy Maid Tracker — Your Humble Duty Awaits</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Grandstander:wght@700&family=Comic+Neue&display=swap');
+
+  body {
+    font-family: 'Comic Neue', cursive, Arial, sans-serif;
+    background: #ffe6f0;
+    color: #a10056;
+    padding: 25px 30px;
+    max-width: 920px;
+    margin: 15px auto;
+    border: 8px double #ffb6c1;
+    border-radius: 18px;
+    box-shadow: 0 0 20px #ffb6c1aa inset;
+  }
+
+  h1 {
+    font-family: 'Grandstander', cursive;
+    font-size: 3.2rem;
+    text-align: center;
+    color: #d81b60;
+    margin-bottom: 0.2em;
+    text-shadow: 1px 1px 3px #b52f6d;
+  }
+
+  p {
+    font-size: 1.3em;
+    font-style: italic;
+    text-align: center;
+    color: #a10056cc;
+    margin-bottom: 1.2em;
+  }
+
+  #scanner {
+    max-width: 400px;
+    margin: 0 auto 30px auto;
+    border: 6px dashed #d81b60;
+    border-radius: 15px;
+    background: #fff0f6;
+    box-shadow: 0 0 12px #d81b6099;
+  }
+
+  #scan-result {
+    text-align: center;
+    margin-top: 12px;
+    font-weight: 700;
+    font-size: 1.3em;
+    min-height: 1.7em;
+    color: #6a0039;
+    user-select: none;
+  }
+
+  #progress-bar {
+    width: 100%;
+    background: #fce4ec;
+    border-radius: 25px;
+    overflow: hidden;
+    margin: 25px 0 35px 0;
+    box-shadow: inset 0 0 7px #a10056aa;
+  }
+
+  #progress-bar > div {
+    height: 26px;
+    background: #b71c4f;
+    width: 0%;
+    transition: width 0.3s ease-in-out;
+    text-align: center;
+    line-height: 26px;
+    font-weight: 700;
+    color: #ffe6f0;
+    text-shadow: 0 0 5px #51002a;
+  }
+
+  #task-status {
+    margin-top: 10px;
+  }
+
+  ul {
+    list-style-type: none;
+    padding-left: 0;
+    max-height: 420px;
+    overflow-y: auto;
+    border: 2px solid #ff9fba;
+    border-radius: 14px;
+    background: #fff0f6;
+    box-shadow: 0 0 15px #d81b6044 inset;
+  }
+
+  li {
+    background: #ffd6e8;
+    margin: 6px 12px;
+    padding: 14px 20px;
+    border-radius: 14px;
+    box-shadow: 0 0 7px #d81b60aa;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    color: #6a0039;
+    user-select: none;
+  }
+
+  li.completed {
+    background: #ffbad4;
+    color: #4a0030;
+    text-decoration: line-through;
+    font-style: italic;
+    box-shadow: 0 0 8px #9b0042 inset;
+  }
+
+  .timestamp {
+    font-size: 0.83em;
+    color: #7f2954cc;
+    margin-left: 12px;
+    font-style: normal;
+  }
+
+  #qr-section {
+    margin-top: 35px;
+    text-align: center;
+  }
+
+  #toggle-qr-btn {
+    background: #a10056;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    padding: 14px 26px;
+    font-size: 1.1em;
+    cursor: pointer;
+    margin: 0 auto;
+    box-shadow: 0 0 12px #d81b60;
+    font-weight: 700;
+    letter-spacing: 1.3px;
+    user-select: none;
+    transition: background 0.3s ease;
+  }
+  #toggle-qr-btn:hover {
+    background: #6a0039;
+  }
+
+  #qr-container {
+    margin-top: 20px;
+    display: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 18px;
+  }
+
+  .qr-box {
+    background: #ffe4f1;
+    border: 3px solid #a10056;
+    border-radius: 16px;
+    width: 160px;
+    padding: 12px 9px 15px;
+    box-shadow: 0 0 8px #d81b6077;
+    user-select: none;
+    text-align: center;
+  }
+
+  .qr-box canvas {
+    margin: 0 auto 11px auto;
+    border-radius: 8px;
+  }
+
+  .qr-label {
+    font-size: 0.82em;
+    color: #7b0045;
+    font-weight: 600;
+    line-height: 1.3em;
+    user-select: text;
+  }
+
+  #clear-button {
+    background: #a10056;
+    color: white;
+    border: none;
+    border-radius: 32px;
+    padding: 16px 32px;
+    font-size: 1.2em;
+    cursor: pointer;
+    margin: 45px auto 0;
+    display: block;
+    box-shadow: 0 0 20px #d81b60cc;
+    font-weight: 800;
+    letter-spacing: 1.6px;
+    user-select: none;
+    transition: background 0.3s ease;
+  }
+  #clear-button:hover {
+    background: #6a0039;
+  }
+
+  /* Scrollbar for task list */
+  ul::-webkit-scrollbar {
+    width: 8px;
+  }
+  ul::-webkit-scrollbar-track {
+    background: #ffe6f0;
+    border-radius: 14px;
+  }
+  ul::-webkit-scrollbar-thumb {
+    background: #a10056;
+    border-radius: 14px;
+  }
+
+  /* Smaller font on mobile */
+  @media (max-width: 480px) {
+    body {
+      padding: 15px 15px;
+    }
+    h1 {
+      font-size: 2.2rem;
+    }
+    #clear-button, #toggle-qr-btn {
+      padding: 12px 22px;
+      font-size: 1em;
+    }
+    ul {
+      max-height: 320px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<h1>👗 Sissy Maid Tracker</h1>
+<p>Scan every humiliating task QR code, your Mistress expects perfection! No slacking, no excuses — keep this castle sparkling just for her pleasure.</p>
+
+<div id="scanner" aria-label="QR Code Scanner for task completion"></div>
+<div id="scan-result" role="alert" aria-live="polite"></div>
+
+<div id="progress-bar" aria-label="Progress bar showing completed tasks"><div></div></div>
+
+<div id="task-status" aria-live="polite" aria-atomic="true"></div>
+
+<div id="qr-section">
+  <button id="toggle-qr-btn" aria-expanded="false" aria-controls="qr-container" aria-haspopup="true">
+    Show QR Codes ▼
+  </button>
+  <div id="qr-container" aria-hidden="true" role="region" aria-label="All 30 Sissy Maid Task QR Codes">
+    <!-- QR codes get generated here -->
+  </div>
+</div>
+
+<button id="clear-button" title="Reset all progress (Mistress Only)">Reset Tracker</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.7/html5-qrcode.min.js"></script>
+
+<script>
+  const tasks = [
+    "Dust all surfaces in the living room",
+    "Vacuum the entire house",
+    "Mop all floors",
+    "Clean the kitchen counters and sink",
+    "Wash all dishes and dry them",
+    "Clean inside the microwave",
+    "Wipe down all mirrors and windows",
+    "Organize the living room shelves",
+    "Change bed linens in all bedrooms",
+    "Empty all trash bins and replace liners",
+    "Clean and sanitize bathroom sinks",
+    "Scrub the toilet bowls",
+    "Clean the bathtub and shower area",
+    "Fold and organize laundry",
+    "Water all houseplants",
+    "Polish all wooden furniture",
+    "Clean refrigerator shelves and door",
+    "Organize the pantry",
+    "Sweep the porch and entrance",
+    "Clean the dining table and chairs",
+    "Dust and clean ceiling fans",
+    "Clean light switches and door handles",
+    "Organize shoes in the entryway",
+    "Wipe down kitchen appliances",
+    "Clean pet feeding areas",
+    "Sanitize remote controls and electronics",
+    "Clean inside all cupboards",
+    "Vacuum upholstery and cushions",
+    "Clean oven interior",
+    "Prepare a fresh pot of tea for Mistress"
+  ];
+
+  const STORAGE_KEY = 'sissy_maid_tracker_2025';
+
+  // Load progress from localStorage
+  function loadProgress() {
+    const data = localStorage.getItem(STORAGE_KEY);
+    return data ? JSON.parse(data) : {};
+  }
+
+  // Save progress to localStorage
+  function saveProgress(progress) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+  }
+
+  // Render task list and progress bar
+  function renderTasks(progress) {
+    const list = document.createElement('ul');
+    let completedCount = 0;
+
+    tasks.forEach((task, i) => {
+      const id = 'task' + (i+1);
+      const li = document.createElement('li');
+      li.textContent = `${i+1}. ${task}`;
+      if(progress[id]) {
+        li.classList.add('completed');
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'timestamp';
+        timeSpan.textContent = `(Done at ${new Date(progress[id]).toLocaleTimeString()})`;
+        li.appendChild(timeSpan);
+        completedCount++;
+      }
+      list.appendChild(li);
+    });
+
+    const container = document.getElementById('task-status');
+    container.innerHTML = '';
+    container.appendChild(list);
+
+    // Update progress bar
+    const progressBar = document.querySelector('#progress-bar > div');
+    const percent = (completedCount / tasks.length) * 100;
+    progressBar.style.width = percent + '%';
+    progressBar.textContent = `${completedCount} / ${tasks.length} humiliating tasks done`;
+
+    return completedCount === tasks.length;
+  }
+
+  // Mark task as completed
+  function markTaskCompleted(taskId) {
+    const progress = loadProgress();
+    if(progress[taskId]) return false; // Already done
+    progress[taskId] = Date.now();
+    saveProgress(progress);
+    renderTasks(progress);
+    return true;
+  }
+
+  // Generate all QR codes with task info URLs
+  function generateQRCodes() {
+    const container = document.getElementById('qr-container');
+    container.innerHTML = '';
+    tasks.forEach((task, i) => {
+      const taskId = 'task' + (i+1);
+      const qrBox = document.createElement('div');
+      qrBox.className = 'qr-box';
+
+      const qr = new QRCode(qrBox, {
+        text: `${location.origin}${location.pathname}?task=${taskId}`,
+        width: 140,
+        height: 140,
+        colorDark : "#a10056",
+        colorLight : "#fff0f6",
+        correctLevel : QRCode.CorrectLevel.H
+      });
+
+      const qrLabel = document.createElement('div');
+      qrLabel.className = 'qr-label';
+      qrLabel.textContent = `${i+1}. ${task}`;
+      qrBox.appendChild(qrLabel);
+
+      container.appendChild(qrBox);
+    });
+  }
+
+  // Show scan result with color feedback
+  function showScanResult(message, isError = false) {
+    const el = document.getElementById('scan-result');
+    el.textContent = message;
+    el.style.color = isError ? '#b71c1c' : '#256029';
+  }
+
+  // Initialize camera scanner
+  function initScanner() {
+    const html5QrCode = new Html5Qrcode("scanner");
+    const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+      html5QrCode.pause();
+
+      try {
+        const url = new URL(decodedText);
+        const taskParam = url.searchParams.get('task');
+if (taskParam && /^task\d+$/.test(taskParam)) {
+  if (markTaskCompleted(taskParam)) {
+    const taskIndex = parseInt(taskParam.replace('task', '')) - 1;
+    const taskName = tasks[taskIndex] || "Unknown task";
+
+    // Send to Google Sheet
+    fetch("https://script.google.com/macros/s/AKfycbz7xIeeIJ4qkoPAcN3a5GPww1gkO-19HMtwM1iGpKzAhUNhDKYO-mof8g4LFcCNpzcl/exec", {
+      method: "POST",
+      body: JSON.stringify({
+        taskId: taskParam,
+        taskName: taskName
+      }),
+      headers: {
+        "Content-Type": "application/json"
+      }
+    })
+    .then(res => res.text())
+    .then(text => console.log("✅ Logged to Sheet:", text))
+    .catch(err => console.error("❌ Logging error:", err));
+
+    showScanResult(`You did it! Task ${taskParam.replace('task','')} marked completed. Good little sissy! ✅`);
+  } else {
+    showScanResult(`Task ${taskParam.replace('task','')} already marked completed, darling.`, true);
+  }
+} else {
+  showScanResult("That's not one of your tasks, sissy! Try again.", true);
+}
+      } catch(e) {
+        showScanResult("Invalid QR code. Focus, sissy!", true);
+      }
+
+      setTimeout(() => {
+        html5QrCode.resume();
+      }, 2500);
+    };
+
+    const config = { fps: 10, qrbox: 250 };
+
+    html5QrCode.start(
+      { facingMode: "environment" },
+      config,
+      qrCodeSuccessCallback
+    ).catch(err => {
+      console.error("Camera start failed:", err);
+      showScanResult("Camera unavailable or permission denied, darling.", true);
+    });
+  }
+
+  // Password-protected reset function
+  function clearProgress() {
+    const pwd = prompt('Mistress demands the password to reset this disgraceful tracker:');
+    if(pwd === 'Mistress2025') {
+      if(confirm('Are you sure you want to erase all your shameful progress and start fresh?')) {
+        localStorage.removeItem(STORAGE_KEY);
+        renderTasks({});
+        showScanResult('');
+        alert('Tracker has been reset. Back to work, sissy!');
+      }
+    } else if(pwd !== null) {
+      alert('Wrong password! Shame on you!');
+    }
+  }
+
+  // Toggle QR codes container visibility
+  function toggleQRCodes() {
+    const qrContainer = document.getElementById('qr-container');
+    const btn = document.getElementById('toggle-qr-btn');
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+
+    if (expanded) {
+      qrContainer.style.display = 'none';
+      btn.textContent = 'Show QR Codes ▼';
+      btn.setAttribute('aria-expanded', 'false');
+      qrContainer.setAttribute('aria-hidden', 'true');
+    } else {
+      qrContainer.style.display = 'flex';
+      btn.textContent = 'Hide QR Codes ▲';
+      btn.setAttribute('aria-expanded', 'true');
+      qrContainer.setAttribute('aria-hidden', 'false');
+    }
+  }
+
+  // Initialization on load
+  window.onload = () => {
+    generateQRCodes();
+    renderTasks(loadProgress());
+    initScanner();
+
+    document.getElementById('clear-button').onclick = clearProgress;
+    document.getElementById('toggle-qr-btn').onclick = toggleQRCodes;
+
+    // Check URL param for direct task marking (from QR link)
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramTask = urlParams.get('task');
+    if(paramTask && /^task\d+$/.test(paramTask)) {
+      if(markTaskCompleted(paramTask)) {
+        showScanResult(`Task ${paramTask.replace('task','')} marked completed from URL! Good job, sissy! ✅`);
+      } else {
+        showScanResult(`Task ${paramTask.replace('task','')} was already completed.`, true);
+      }
+      history.replaceState(null, '', location.pathname);
+    }
+  };
+
+  // Attempt fullscreen on load
+  document.addEventListener('DOMContentLoaded', () => {
+    const enterFullscreen = () => {
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+      } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+      } else if (elem.msRequestFullscreen) {
+        elem.msRequestFullscreen();
+      }
+    };
+    enterFullscreen();
+
+    // If flagged from last exit, show humiliating popup
+    if (localStorage.getItem('sissy_failed') === 'yes') {
+      alert("💄 Naughty sissy maid! You dared to leave your duties.\nYour session has been reset. Beg for another chance to serve properly.");
+      localStorage.removeItem('sissy_failed');
+    }
+  });
+
+  // When tab is hidden or minimized — flag as failed
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      localStorage.setItem('sissy_failed', 'yes');
+      resetSession();
+    }
+  });
+
+  // When window is closed or refreshed — flag as failed
+  window.addEventListener('beforeunload', () => {
+    localStorage.setItem('sissy_failed', 'yes');
+  });
+
+  // Reset logic — modify this based on your app
+  function resetSession() {
+    localStorage.removeItem('yourTaskData'); // Remove this line if not used
+    sessionStorage.clear();
+  }
+</script>
+
+</body>
+</html>
