@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sissy Walker STRICT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="manifest" id="manifestPlaceholder">
+
+<style>
+body {
+    margin:0;
+    font-family: Arial;
+    background:#000;
+    color:white;
+    text-align:center;
+}
+.container {
+    max-width:420px;
+    margin:auto;
+    padding:15px;
+}
+input, button {
+    width:90%;
+    padding:12px;
+    margin:8px;
+    border-radius:10px;
+    border:none;
+    font-size:16px;
+}
+button {
+    background:#ff2d7a;
+    color:white;
+    font-weight:bold;
+}
+#timer {
+    font-size:48px;
+    margin:10px;
+}
+#status {
+    padding:10px;
+    border-radius:20px;
+}
+.good { background:#2ecc71; }
+.warning { background:#e74c3c; }
+.processing { background:#f39c12; }
+#score {
+    font-size:20px;
+}
+video {
+    width:100%;
+    border-radius:12px;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+</head>
+<body>
+
+<div class="container">
+
+<h2>SissyWalker STRICT</h2>
+
+<input type="number" id="duration" value="2" placeholder="Minutes">
+<input type="text" id="customText" placeholder="Mistress message">
+
+<button onclick="start()">START</button>
+
+<div id="timer">00:00</div>
+<div id="status">Idle</div>
+<div id="score">Score: 100</div>
+
+<video id="video" autoplay muted playsinline></video>
+
+<audio id="beep">
+<source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
+</audio>
+
+</div>
+
+<script>
+let stream, recorder, chunks=[];
+let remainingTime = 0;
+let timerInterval;
+let lastMovementTime = Date.now();
+
+let walkingScore = 100;
+let lastKneeY = null;
+let idleStreak = 0;
+
+// START
+async function start(){
+    const min = document.getElementById("duration").value;
+    remainingTime = min * 60;
+
+    stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false
+    });
+
+    const video = document.getElementById("video");
+    video.srcObject = stream;
+    await video.play();
+
+    initPose(video);
+    startRecording();
+    startTimer();
+}
+
+// POSE
+let pose;
+
+function initPose(video){
+    pose = new Pose({
+        locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+    });
+
+    pose.setOptions({
+        modelComplexity:0,
+        smoothLandmarks:true
+    });
+
+    pose.onResults(onPoseResults);
+
+    const camera = new Camera(video,{
+        onFrame: async () => {
+            await pose.send({ image: video });
+        },
+        width:640,
+        height:480
+    });
+
+    camera.start();
+}
+
+function onPoseResults(results){
+    if (!results.poseLandmarks) return;
+
+    const leftKnee = results.poseLandmarks[25];
+    const rightKnee = results.poseLandmarks[26];
+
+    if(!leftKnee || !rightKnee) return;
+
+    const avgY = (leftKnee.y + rightKnee.y)/2;
+
+    if(lastKneeY !== null){
+        const diff = Math.abs(avgY - lastKneeY);
+        if(diff > 0.02){
+            lastMovementTime = Date.now();
+        }
+    }
+
+    lastKneeY = avgY;
+}
+
+// TIMER
+function startTimer(){
+    timerInterval = setInterval(()=>{
+
+        const now = Date.now();
+        const moving = (now - lastMovementTime < 1200);
+
+        if(remainingTime <= 0){
+            remainingTime = 0;
+            updateTimer();
+            stopAll();
+            return;
+        }
+
+        if(moving){
+            remainingTime--;
+            idleStreak = 0;
+            walkingScore += 0.3;
+            setStatus("✔ Walking","good");
+        } else {
+            idleStreak++;
+            walkingScore -= (2 + idleStreak * 0.8);
+            setStatus("⚠ MOVE NOW","warning");
+            document.getElementById("beep").play();
+        }
+
+        walkingScore = Math.max(0, Math.min(100, walkingScore));
+
+        updateTimer();
+        updateScore();
+
+    },1000);
+}
+
+// UI
+function updateTimer(){
+    const m = Math.floor(remainingTime/60);
+    const s = remainingTime%60;
+    document.getElementById("timer").innerText =
+        `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function updateScore(){
+    document.getElementById("score").innerText =
+        "Obedience Score: " + Math.round(walkingScore);
+}
+
+function setStatus(t,c){
+    const el = document.getElementById("status");
+    el.innerText = t;
+    el.className = c;
+}
+
+// RECORD
+function startRecording(){
+    chunks=[];
+    recorder = new MediaRecorder(stream);
+    recorder.ondataavailable = e => chunks.push(e.data);
+    recorder.start();
+}
+
+// STOP
+function stopAll(){
+    clearInterval(timerInterval);
+    setStatus("Processing...","processing");
+
+    recorder.stop();
+
+    recorder.onstop = ()=>{
+        processVideo(new Blob(chunks,{type:'video/webm'}));
+    };
+}
+
+// VIDEO PROCESS
+function processVideo(blob){
+    const customText = document.getElementById("customText").value || "SissyWalker";
+
+    const video = document.createElement("video");
+    video.src = URL.createObjectURL(blob);
+
+    video.onloadeddata = ()=>{
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        const stream = canvas.captureStream(30);
+        const rec = new MediaRecorder(stream);
+
+        let newChunks=[];
+        rec.ondataavailable = e=>newChunks.push(e.data);
+        rec.start();
+
+        video.playbackRate = 10;
+        video.play();
+
+        const now = new Date();
+        const dateStr = now.toISOString().replace(/[-:T]/g,"").slice(0,12);
+        const durationMin = document.getElementById("duration").value;
+
+        function draw(){
+            ctx.drawImage(video,0,0);
+
+            ctx.fillStyle="rgba(255,255,255,0.25)";
+            ctx.font="bold 30px Arial";
+            ctx.textAlign="center";
+            ctx.fillText(customText, canvas.width/2, canvas.height/2);
+
+            ctx.fillStyle="red";
+            ctx.font="16px Arial";
+            ctx.textAlign="left";
+            ctx.fillText(
+                `Score:${Math.round(walkingScore)} | ${dateStr} | ${durationMin}min`,
+                10,
+                canvas.height-20
+            );
+
+            if(!video.ended){
+                requestAnimationFrame(draw);
+            }
+        }
+
+        draw();
+
+        video.onended = ()=>{
+            rec.stop();
+
+            rec.onstop = ()=>{
+                const finalBlob = new Blob(newChunks,{type:'video/webm'});
+
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(finalBlob);
+                a.download = `STRICT_${dateStr}.webm`;
+                a.click();
+
+                if(walkingScore < 60){
+                    setStatus("FAILED ❌","warning");
+                } else {
+                    setStatus("PASSED ✔","good");
+                }
+            };
+        };
+    };
+}
+
+// PWA
+const manifest = {
+  name:"Sissy Walker STRICT",
+  short_name:"Walker",
+  display:"standalone",
+  background_color:"#000",
+  theme_color:"#ff2d7a"
+};
+
+const manifestBlob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+document.getElementById("manifestPlaceholder").href = URL.createObjectURL(manifestBlob);
+
+if ('serviceWorker' in navigator) {
+    const swBlob = new Blob([`self.addEventListener('install',e=>self.skipWaiting());`],{type:'text/javascript'});
+    navigator.serviceWorker.register(URL.createObjectURL(swBlob));
+}
+</script>
+
+</body>
+</html>

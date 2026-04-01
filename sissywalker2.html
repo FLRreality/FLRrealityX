@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sissy Walker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+    font-family: Arial;
+    text-align: center;
+    background: #000;
+    color: #fff;
+}
+video {
+    width: 90%;
+    max-width: 400px;
+    border-radius: 10px;
+}
+#status {
+    font-size: 20px;
+    margin: 10px;
+}
+.warning {
+    color: red;
+    font-weight: bold;
+}
+.good {
+    color: lime;
+}
+</style>
+</head>
+<body>
+
+<h2>SissyWalker</h2>
+
+<input type="number" id="duration" value="2"> minutes<br>
+<button onclick="start()">Start</button>
+
+<p id="timer">00:00</p>
+<p id="status">Idle</p>
+
+<video id="video" autoplay muted playsinline></video>
+<canvas id="canvas" style="display:none;"></canvas>
+
+<audio id="beep">
+<source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
+</audio>
+
+<script>
+let stream, recorder, chunks=[];
+let detecting = false;
+let lastFrame = null;
+
+let remainingTime = 0;
+let timerInterval;
+
+let movement = false;
+let lastMovementTime = Date.now();
+
+async function start(){
+    const min = document.getElementById("duration").value;
+    remainingTime = min * 60;
+
+    stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false
+    });
+
+    const video = document.getElementById("video");
+    video.srcObject = stream;
+
+    await video.play();
+
+    startRecording();
+    startDetection();
+    startTimer();
+
+    document.getElementById("status").innerText = "Walking...";
+}
+
+function startRecording(){
+    chunks = [];
+    recorder = new MediaRecorder(stream);
+    recorder.ondataavailable = e => chunks.push(e.data);
+    recorder.start();
+}
+
+function startTimer(){
+    timerInterval = setInterval(()=>{
+        const now = Date.now();
+
+        // Only count if movement detected recently
+        if(now - lastMovementTime < 1500){
+            remainingTime--;
+        }
+
+        const min = Math.floor(remainingTime / 60);
+        const sec = remainingTime % 60;
+
+        document.getElementById("timer").innerText =
+            `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+
+        if(now - lastMovementTime > 1500){
+            document.getElementById("status").innerText = "⚠ WALK!";
+            document.getElementById("status").className = "warning";
+            document.getElementById("beep").play();
+        } else {
+            document.getElementById("status").innerText = "✔ Walking";
+            document.getElementById("status").className = "good";
+        }
+
+        if(remainingTime <= 0){
+            stopAll();
+        }
+
+    },1000);
+}
+
+function startDetection(){
+    detecting = true;
+
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    function detect(){
+        if(!detecting) return;
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        // ONLY LOWER HALF (legs area)
+        const h = canvas.height;
+        ctx.drawImage(video, 0, h/2, canvas.width, h/2, 0, 0, canvas.width, h/2);
+
+        const frame = ctx.getImageData(0,0,canvas.width, h/2);
+
+        if(lastFrame){
+            let diff = 0;
+
+            for(let i=0;i<frame.data.length;i+=4){
+                diff += Math.abs(frame.data[i] - lastFrame.data[i]);
+            }
+
+            if(diff > 1500000){
+                lastMovementTime = Date.now();
+            }
+        }
+
+        lastFrame = frame;
+
+        requestAnimationFrame(detect);
+    }
+
+    detect();
+}
+
+function stopAll(){
+    detecting = false;
+    clearInterval(timerInterval);
+
+    recorder.stop();
+
+    recorder.onstop = ()=>{
+        const blob = new Blob(chunks, {type:'video/webm'});
+        processVideo(blob);
+    };
+
+    document.getElementById("status").innerText = "Processing...";
+}
+
+function processVideo(blob){
+    const video = document.createElement("video");
+    video.src = URL.createObjectURL(blob);
+
+    video.onloadeddata = ()=>{
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        const stream = canvas.captureStream(30);
+        const rec = new MediaRecorder(stream);
+
+        let newChunks=[];
+        rec.ondataavailable = e=>newChunks.push(e.data);
+
+        rec.start();
+
+        video.playbackRate = 10;
+        video.play();
+
+        const startTime = new Date();
+        const dateStr = startTime.toISOString().replace(/[-:T]/g,"").slice(0,12);
+
+        function draw(){
+            ctx.drawImage(video,0,0);
+
+            ctx.fillStyle="red";
+            ctx.font="20px Arial";
+
+            ctx.fillText(
+                `SissyWalker ${dateStr}`,
+                10,30
+            );
+
+            if(!video.ended){
+                requestAnimationFrame(draw);
+            }
+        }
+
+        draw();
+
+        video.onended = ()=>{
+            rec.stop();
+
+            rec.onstop = ()=>{
+                const finalBlob = new Blob(newChunks, {type:'video/webm'});
+
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(finalBlob);
+                a.download = `SissyWalker_${dateStr}.webm`;
+                a.click();
+
+                document.getElementById("status").innerText = "Saved ✔";
+            };
+        };
+    };
+}
+</script>
+
+</body>
+</html>
