@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sissy Walker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+    body {
+        font-family: Arial;
+        text-align: center;
+        background: #111;
+        color: #fff;
+    }
+    video, canvas {
+        width: 90%;
+        max-width: 400px;
+        border-radius: 10px;
+        margin-top: 10px;
+    }
+    button, input {
+        margin: 10px;
+        padding: 10px;
+        font-size: 16px;
+    }
+</style>
+</head>
+<body>
+
+<h2>SissyWalker</h2>
+
+<label>Duration (minutes):</label><br>
+<input type="number" id="duration" value="2"><br>
+
+<button onclick="startSession()">Start Walking</button>
+
+<p id="status">Idle</p>
+
+<video id="video" autoplay muted playsinline></video>
+<canvas id="canvas" style="display:none;"></canvas>
+
+<script>
+let stream;
+let mediaRecorder;
+let chunks = [];
+let detecting = false;
+let lastFrame = null;
+let movementDetected = false;
+
+async function startSession() {
+    const durationMin = document.getElementById("duration").value;
+    const durationMs = durationMin * 60 * 1000;
+
+    document.getElementById("status").innerText = "Starting camera...";
+
+    stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false
+    });
+
+    const video = document.getElementById("video");
+    video.srcObject = stream;
+
+    await video.play();
+
+    startRecording();
+    startMotionDetection();
+
+    document.getElementById("status").innerText = "Walk now...";
+
+    setTimeout(stopSession, durationMs);
+}
+
+function startRecording() {
+    chunks = [];
+
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => chunks.push(e.data);
+
+    mediaRecorder.start();
+}
+
+function startMotionDetection() {
+    detecting = true;
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    function detect() {
+        if (!detecting) return;
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        ctx.drawImage(video, 0, 0);
+
+        const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        if (lastFrame) {
+            let diff = 0;
+
+            for (let i = 0; i < frame.data.length; i += 4) {
+                diff += Math.abs(frame.data[i] - lastFrame.data[i]);
+            }
+
+            if (diff > 5000000) {
+                movementDetected = true;
+            }
+        }
+
+        lastFrame = frame;
+        requestAnimationFrame(detect);
+    }
+
+    detect();
+}
+
+function stopSession() {
+    detecting = false;
+    mediaRecorder.stop();
+
+    document.getElementById("status").innerText = "Processing video...";
+
+    mediaRecorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: "video/webm" });
+
+        const videoURL = URL.createObjectURL(blob);
+
+        processVideo(videoURL);
+    };
+}
+
+function processVideo(videoURL) {
+    const video = document.createElement("video");
+    video.src = videoURL;
+
+    video.onloadeddata = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        const stream = canvas.captureStream(30);
+        const recorder = new MediaRecorder(stream);
+
+        let newChunks = [];
+        recorder.ondataavailable = e => newChunks.push(e.data);
+
+        recorder.start();
+
+        video.playbackRate = 10; // 🔥 speed up 10x
+        video.play();
+
+        function draw() {
+            ctx.drawImage(video, 0, 0);
+
+            // Watermark
+            ctx.fillStyle = "red";
+            ctx.font = "20px Arial";
+
+            const now = new Date();
+            const dateStr = now.toISOString().replace(/[-:T]/g,"").slice(0,12);
+
+            ctx.fillText(
+                `SissyWalker ${dateStr}`,
+                10,
+                30
+            );
+
+            if (!video.ended) {
+                requestAnimationFrame(draw);
+            }
+        }
+
+        draw();
+
+        video.onended = () => {
+            recorder.stop();
+
+            recorder.onstop = () => {
+                const finalBlob = new Blob(newChunks, { type: "video/webm" });
+
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(finalBlob);
+
+                a.download = "SissyWalker.webm";
+                a.click();
+
+                document.getElementById("status").innerText = "Done ✔";
+            };
+        };
+    };
+}
+</script>
+
+</body>
+</html>
